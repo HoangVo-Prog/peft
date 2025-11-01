@@ -74,7 +74,7 @@ def train(cfg: RunConfig):
         num_train_epochs=cfg.num_train_epochs,
         weight_decay=cfg.weight_decay,
         warmup_ratio=cfg.warmup_ratio,
-        evaluation_strategy=cfg.eval_strategy,
+        eval_strategy=cfg.eval_strategy,
         save_strategy=cfg.save_strategy,
         save_total_limit=cfg.save_total_limit,
         load_best_model_at_end=True,
