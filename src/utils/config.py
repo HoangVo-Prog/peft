@@ -15,6 +15,7 @@ class RunConfig:
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
     warmup_ratio: float = 0.06
+    logging_steps: int = 100
     seed: int = 42
     save_strategy: str = "epoch" # or "steps"
     eval_strategy: str = "epoch" # or "steps"

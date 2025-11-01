@@ -82,7 +82,7 @@ def train(cfg: RunConfig):
         greater_is_better=True,
         fp16=bool(cfg.fp16 and torch.cuda.is_available()),
         bf16=bool(cfg.bf16 and torch.cuda.is_available()),
-        logging_steps=50,
+        logging_steps=cfg.logging_steps,
         report_to=report_targets,
         run_name=run_name,
     )
