@@ -1,7 +1,7 @@
 import numpy as np
 import evaluate
 
-from .config import is_regression_task
+from ..utils.config import is_regression_task
 
 
 def get_best_metric_for_task(task: str) -> str:

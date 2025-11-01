@@ -2,7 +2,7 @@ from datasets import load_dataset, DatasetDict
 from transformers import AutoTokenizer, DataCollatorWithPadding
 
 
-from .config import GLUE_SENTENCE_KEYS, is_regression_task
+from ..utils.config import GLUE_SENTENCE_KEYS, is_regression_task
 
 
 

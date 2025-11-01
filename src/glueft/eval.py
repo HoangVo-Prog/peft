@@ -6,7 +6,7 @@ from transformers import AutoModelForSequenceClassification, TrainingArguments, 
 from transformers import AutoTokenizer, DataCollatorWithPadding
 from datasets import load_dataset
 
-from .config import GLUE_SENTENCE_KEYS, is_regression_task
+from ..utils.config import GLUE_SENTENCE_KEYS, is_regression_task
 from .metrics import build_compute_metrics
 
 

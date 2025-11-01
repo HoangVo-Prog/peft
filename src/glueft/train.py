@@ -12,10 +12,10 @@ from transformers import (
     set_seed,
 )
 
-from .config import RunConfig, is_regression_task
-from .data import load_glue_and_tokenizer
-from .metrics import build_compute_metrics, get_best_metric_for_task
-from .wandb_utils import setup_wandb
+from ..utils.config import RunConfig, is_regression_task
+from ..utils.data import load_glue_and_tokenizer
+from ..utils.metrics import build_compute_metrics, get_best_metric_for_task
+from ..utils.wandb_utils import setup_wandb
 
 
 def _timestamp():

@@ -23,7 +23,7 @@ class RunConfig:
     bf16: bool = False
     # W&B settings
     wandb_enable: bool = True
-    wandb_project: Optional[str] = "glue-ft"
+    wandb_project: Optional[str] = "glue"
     wandb_entity: Optional[str] = None
     wandb_run_name: Optional[str] = None
     wandb_offline_fallback: bool = True
