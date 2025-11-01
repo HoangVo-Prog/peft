@@ -154,11 +154,19 @@ def train(cfg: RunConfig):
         dump_preds(eval_mm_ds, "val_mismatched")
 
     if "test" in encoded:
-        test_preds = trainer.predict(encoded["test"]).predictions
+        test_ds = encoded["test"]
+    # Ensure no label columns exist to avoid CrossEntropy on invalid targets
+    for col in ("label", "labels"):
+        if col in test_ds.column_names:
+            test_ds = test_ds.remove_columns(col)
+    try:
+        test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
         np.save(os.path.join(cfg.output_dir, "test_logits.npy"), test_preds)
-
+    except Exception as e:
+        print("[WARN] Skipping test prediction due to:", e)
+    
     print("Saved best model to:", best_dir)
-
+    
     try:
         if cfg.wandb_enable:
             import wandb  # type: ignore
