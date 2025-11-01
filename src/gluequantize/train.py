@@ -13,9 +13,9 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from src.glueft.data import load_glue_and_tokenizer
-from src.glueft.metrics import build_compute_metrics, get_best_metric_for_task
-from src.glueft.config import RunConfig, is_regression_task
+from src.utils.data import load_glue_and_tokenizer
+from src.utils.metrics import build_compute_metrics, get_best_metric_for_task
+from src.utils.config import RunConfig, is_regression_task
 
 # Optional W&B setup if available
 def _maybe_setup_wandb(task, model_name, project, entity, run_name, offline_fallback):

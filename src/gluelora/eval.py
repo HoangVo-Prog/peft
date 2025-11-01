@@ -5,8 +5,8 @@ import os
 from datasets import load_dataset
 from transformers import AutoTokenizer, DataCollatorWithPadding, TrainingArguments, Trainer
 
-from src.glueft.metrics import build_compute_metrics
-from src.glueft.config import GLUE_SENTENCE_KEYS
+from src.utils.metrics import build_compute_metrics
+from src.utils.config import GLUE_SENTENCE_KEYS
 
 # Prefer AutoPeft if available, fallback otherwise
 try:
