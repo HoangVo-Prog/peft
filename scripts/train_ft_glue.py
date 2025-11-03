@@ -6,8 +6,8 @@ import sys
 # Allow running without installing the package
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
-from glueft.config import RunConfig
-from glueft.train import main
+from ..src.utils.config import RunConfig
+from ..src.glueft.train import main
 
 
 def parse_args():
