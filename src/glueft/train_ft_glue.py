@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-import pathlib
-import sys
 
-# Allow running without installing the package
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "src"))
-
-from ..src.utils.config import RunConfig
-from ..src.glueft.train import main
+from src.utils.config import RunConfig
+from src.glueft.train import main
 
 
 def parse_args():
