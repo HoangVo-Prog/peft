@@ -22,7 +22,7 @@ mkdir -p "$OUTPUT_DIR"
 LOG_FILE="${OUTPUT_DIR}/train_lora_${TASK}_${MODEL}_${TIMESTAMP}.log"
 
 # Chạy bằng nohup
-nohup python src/gluelora/train_lora_glue.py \
+nohup python -m src.gluelora.train_lora_glue.py \
   --task_name "$TASK" \
   --model_name "$MODEL" \
   --output_dir "$OUTPUT_DIR" \
