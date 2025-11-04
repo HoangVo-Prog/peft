@@ -1,6 +1,11 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
 import json
 import os
 from datetime import datetime
+from typing import Optional
 
 import numpy as np
 import torch
@@ -12,17 +17,19 @@ from transformers import (
     set_seed,
 )
 
-from ..utils.config import RunConfig, is_regression_task
-from ..utils.data import load_glue_and_tokenizer
-from ..utils.metrics import build_compute_metrics, get_best_metric_for_task
-from ..utils.wandb_utils import setup_wandb
+# NOTE: We use absolute imports so this script can live anywhere in the repo
+# as long as the project root (containing `src/`) is on PYTHONPATH.
+from src.utils.config import RunConfig, is_regression_task  # type: ignore
+from src.utils.data import load_glue_and_tokenizer  # type: ignore
+from src.utils.metrics import build_compute_metrics, get_best_metric_for_task  # type: ignore
+from src.utils.wandb_utils import setup_wandb  # type: ignore
 
 
-def _timestamp():
+def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
-def train(cfg: RunConfig):
+def train(cfg: RunConfig) -> None:
     os.makedirs(cfg.output_dir, exist_ok=True)
     set_seed(cfg.seed)
 
@@ -65,7 +72,7 @@ def train(cfg: RunConfig):
         run_name = f"{task}-{cfg.model_name}-{_timestamp()}"
         report_targets = ["none"]
 
-    # Arguments
+    # TrainingArguments
     args = TrainingArguments(
         output_dir=cfg.output_dir,
         learning_rate=cfg.learning_rate,
@@ -144,7 +151,7 @@ def train(cfg: RunConfig):
             json.dump(mm_metrics, f, indent=2)
 
     # Dump logits for later analysis
-    def dump_preds(ds, name):
+    def dump_preds(ds, name: str) -> None:
         preds = trainer.predict(ds)
         np.save(os.path.join(cfg.output_dir, f"{name}_logits.npy"), preds.predictions)
         np.save(os.path.join(cfg.output_dir, f"{name}_labels.npy"), preds.label_ids)
@@ -153,20 +160,22 @@ def train(cfg: RunConfig):
     if eval_mm_ds is not None:
         dump_preds(eval_mm_ds, "val_mismatched")
 
+    # Optional test set (some GLUE tasks hide test labels)
+    test_ds = None
     if "test" in encoded:
         test_ds = encoded["test"]
-    # Ensure no label columns exist to avoid CrossEntropy on invalid targets
-    for col in ("label", "labels"):
-        if col in test_ds.column_names:
-            test_ds = test_ds.remove_columns(col)
-    try:
-        test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
-        np.save(os.path.join(cfg.output_dir, "test_logits.npy"), test_preds)
-    except Exception as e:
-        print("[WARN] Skipping test prediction due to:", e)
-    
+        # Ensure no label columns exist to avoid CE on invalid targets
+        for col in ("label", "labels"):
+            if col in test_ds.column_names:
+                test_ds = test_ds.remove_columns(col)
+        try:
+            test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
+            np.save(os.path.join(cfg.output_dir, "test_logits.npy"), test_preds)
+        except Exception as e:
+            print("[WARN] Skipping test prediction due to:", e)
+
     print("Saved best model to:", best_dir)
-    
+
     try:
         if cfg.wandb_enable:
             import wandb  # type: ignore
@@ -175,5 +184,46 @@ def train(cfg: RunConfig):
         pass
 
 
-def main(cfg: RunConfig):
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Unified GLUE fine-tuning (HF Trainer)")
+
+    # Primary names
+    p.add_argument("--task", "--task_name", dest="task_name", type=str, default="sst2")
+    p.add_argument("--model", "--model_name", dest="model_name", type=str, default="bert-base-uncased")
+    p.add_argument("--output-dir", "--output_dir", dest="output_dir", type=str, default="./outputs")
+    p.add_argument("--epochs", "--num_train_epochs", dest="num_train_epochs", type=float, default=3.0)
+    p.add_argument("--train-bsz", "--per_device_train_batch_size", dest="per_device_train_batch_size", type=int, default=32)
+    p.add_argument("--eval-bsz", "--per_device_eval_batch_size", dest="per_device_eval_batch_size", type=int, default=64)
+    p.add_argument("--lr", "--learning_rate", dest="learning_rate", type=float, default=2e-5)
+    p.add_argument("--wd", "--weight_decay", dest="weight_decay", type=float, default=0.01)
+    p.add_argument("--warmup", "--warmup_ratio", dest="warmup_ratio", type=float, default=0.06)
+    p.add_argument("--seed", dest="seed", type=int, default=42)
+
+    p.add_argument("--save-strategy", "--save_strategy", dest="save_strategy", type=str, default="epoch")
+    p.add_argument("--eval-strategy", "--eval_strategy", dest="eval_strategy", type=str, default="epoch")
+    p.add_argument("--save-total", "--save_total_limit", dest="save_total_limit", type=int, default=2)
+
+    p.add_argument("--fp16", dest="fp16", action="store_true")
+    p.add_argument("--bf16", dest="bf16", action="store_true")
+
+    # Logging
+    p.add_argument("--logging-steps", dest="logging_steps", type=int, default=50)
+
+    # W&B
+    p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")
+    p.add_argument("--wandb-project", dest="wandb_project", type=str, default="glue-ft")
+    p.add_argument("--wandb-entity", dest="wandb_entity", type=str, default=None)
+    p.add_argument("--wandb-name", dest="wandb_run_name", type=str, default=None)
+    p.add_argument("--wandb-offline", dest="wandb_offline_fallback", action="store_true")
+
+    return p.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    cfg = RunConfig(**vars(args))
     train(cfg)
+
+
+if __name__ == "__main__":
+    main()
