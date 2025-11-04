@@ -14,7 +14,7 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 OUTPUT_DIR="./outputs/${TASK}-${MODEL}-${TIMESTAMP}"
 mkdir -p "$OUTPUT_DIR"
 
-python -m src.glueft.train_ft_glue.py \
+python -m src.glueft.train_ft_glue \
   --task "$TASK" \
   --model "$MODEL" \
   --output-dir "$OUTPUT_DIR" \

@@ -22,7 +22,7 @@ mkdir -p "$OUTPUT_DIR"
 LOG_FILE="${OUTPUT_DIR}/train_qlora_${TASK}_${MODEL}_${TIMESTAMP}.log"
 
 # Chạy bằng nohup
-nohup python -m src.gluequantize.train_qlora_glue.py \
+nohup python -m src.gluequantize.train_qlora_glue \
   --task_name "$TASK" \
   --model_name "$MODEL" \
   --output_dir "$OUTPUT_DIR" \

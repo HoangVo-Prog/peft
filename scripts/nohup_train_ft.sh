@@ -18,7 +18,7 @@ mkdir -p "$OUTPUT_DIR"
 LOG_FILE="${OUTPUT_DIR}/train_${TASK}_${MODEL}_${TIMESTAMP}.log"
 
 # Chạy bằng nohup và lưu log
-nohup python -m src.glueft.train_ft_glue.py \
+nohup python -m src.glueft.train_ft_glue \
   --task "$TASK" \
   --model "$MODEL" \
   --output-dir "$OUTPUT_DIR" \
