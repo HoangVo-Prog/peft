@@ -14,7 +14,11 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 OUTPUT_DIR="./outputs/${TASK}-${MODEL}-${TIMESTAMP}"
 mkdir -p "$OUTPUT_DIR"
 
-python src/glueft/train_ft_glue.py \
+# Tên file log
+LOG_FILE="${OUTPUT_DIR}/train_${TASK}_${MODEL}_${TIMESTAMP}.log"
+
+# Chạy bằng nohup và lưu log
+nohup python src/glueft/train_ft_glue.py \
   --task "$TASK" \
   --model "$MODEL" \
   --output-dir "$OUTPUT_DIR" \
@@ -22,5 +26,10 @@ python src/glueft/train_ft_glue.py \
   --lr "$LR" \
   --train-bsz "$TRAIN_BSZ" \
   --eval-bsz "$EVAL_BSZ" \
-  --fp16 \
-  --no-wandb
+  --fp16 > "$LOG_FILE" 2>&1 &
+
+# In thông báo ra terminal
+echo "Running fine-tuning task: $TASK with model: $MODEL"
+echo "Output directory: $OUTPUT_DIR"
+echo "Log file: $LOG_FILE"
+echo "Process running in background (PID: $!)"
