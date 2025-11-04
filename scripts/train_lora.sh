@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TASK=sst2
-MODEL=bert-base-uncased
+MODEL=roberta-base # roberta-base roberta-large microsoft/deberta-v3-base
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=32
@@ -29,4 +29,5 @@ python -m src.train_lora_glue \
   --lora_r "$LORA_R" \
   --lora_alpha "$LORA_ALPHA" \
   --lora_dropout "$LORA_DROPOUT" \
-  --lora_target_modules "$LORA_TARGET_MODULES"
+  --lora_target_modules "$LORA_TARGET_MODULES" \
+  --no-wandb

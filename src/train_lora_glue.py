@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import os
 from typing import Optional, List
+from datetime import datetime
 
 import torch
 from transformers import (
@@ -15,21 +16,13 @@ from transformers import (
 from src.utils.data import load_glue_and_tokenizer
 from src.utils.metrics import build_compute_metrics, get_best_metric_for_task
 from src.utils.config import RunConfig, is_regression_task
+from src.utils.wandb_utils import setup_wandb  # type: ignore
 
-# Optional W&B setup if available
-def _maybe_setup_wandb(task, model_name, project, entity, run_name, offline_fallback):
-    try:
-        from src.glueft.wandb_utils import setup_wandb  # type: ignore
-    except Exception:
-        return [], None
-    try:
-        run = setup_wandb(task, model_name, project, entity, run_name, offline_fallback)
-        return ["wandb"], run
-    except Exception:
-        return [], None
 
 from peft import LoraConfig, TaskType, get_peft_model
 
+def _timestamp() -> str:
+    return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 def guess_lora_target_modules(model):
     names = [n for n, _ in model.named_modules()]
@@ -90,11 +83,19 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     metric_for_best = get_best_metric_for_task(cfg.task_name)
 
     # W&B if configured
-    report_to, _ = _maybe_setup_wandb(
-        cfg.task_name, cfg.model_name, getattr(cfg, "wandb_project", None),
-        getattr(cfg, "wandb_entity", None), getattr(cfg, "wandb_run_name", None),
-        getattr(cfg, "wandb_offline_fallback", True),
-    )
+    if cfg.wandb_enable:
+        run_name = setup_wandb(
+            task=cfg.task_name,
+            model_name=cfg.model_name,
+            project=cfg.wandb_project,
+            entity=cfg.wandb_entity,
+            run_name=cfg.wandb_run_name,
+            offline_fallback=cfg.wandb_offline_fallback,
+        )
+        report_targets = ["wandb"]
+    else:
+        run_name = f"{cfg.task_name}-{cfg.model_name}-{_timestamp()}"
+        report_targets = ["none"]
 
     args = TrainingArguments(
         output_dir=cfg.output_dir,
@@ -108,7 +109,8 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         load_best_model_at_end=True,
         metric_for_best_model=metric_for_best,
         logging_steps=cfg.logging_steps,
-        report_to=report_to or ["none"],
+        report_to=report_targets,
+        run_name=run_name,
         seed=lora.seed,
         fp16=torch.cuda.is_available(),
         optim="adamw_torch",
@@ -164,6 +166,7 @@ def main():
     p.add_argument("--gradient_checkpointing", action="store_true")
 
     # W&B
+    p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")
     p.add_argument("--wandb_project", type=str, default=None)
     p.add_argument("--wandb_entity", type=str, default=None)
     p.add_argument("--wandb_run_name", type=str, default=None)
