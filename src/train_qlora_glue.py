@@ -27,24 +27,19 @@ def _timestamp() -> str:
 
 def guess_lora_target_modules(model):
     names = [n for n, _ in model.named_modules()]
-    # LLaMA or Mistral
     if any(n.endswith("q_proj") for n in names):
         return ["q_proj", "k_proj", "v_proj", "o_proj"]
-    # BERT or RoBERTa or DeBERTa
     if any(n.endswith("query") for n in names):
         return ["query", "key", "value"]
-    # GPT2
     if any(n.endswith("c_attn") for n in names):
         return ["c_attn"]
-    # Fallback
     return ["query", "key", "value"]
 
 
 def keep_classifier_fp32(model):
     """
-    Giữ nguyên classifier ở FP32.
-    Nếu đã bị bitsandbytes chuyển thành Linear4bit thì thay lại bằng Linear thường.
-    Hỗ trợ cấu trúc .dense và .out_proj của RoBERTa.
+    Giữ nguyên classifier ở FP32. Nếu đã bị Linear4bit thì thay lại bằng Linear thường.
+    Hỗ trợ .dense và .out_proj của RoBERTa.
     """
     try:
         import bitsandbytes as bnb
@@ -126,20 +121,33 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         device_map="auto",
     )
 
-    # Giữ nguyên head ở FP32, tránh 4-bit
+    # giữ head FP32
     keep_classifier_fp32(base)
 
-    # Bật gradient checkpointing nếu cần, và thêm kwargs để sạch cảnh báo
+    # gradient checkpointing
     if qlora.gradient_checkpointing:
         try:
-            base.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+            base.gradient_checkpointing_enable(
+                gradient_checkpointing_kwargs={"use_reentrant": False}
+            )
         except TypeError:
             base.gradient_checkpointing_enable()
 
-    base = prepare_model_for_kbit_training(
-        base,
-        use_gradient_checkpointing=qlora.gradient_checkpointing,
-    )
+    # prepare k-bit, tương thích PEFT cũ và mới
+    try:
+        base = prepare_model_for_kbit_training(
+            base,
+            use_gradient_checkpointing=qlora.gradient_checkpointing,
+            output_embedding_layer_name="classifier",
+        )
+    except TypeError:
+        base = prepare_model_for_kbit_training(
+            base,
+            use_gradient_checkpointing=qlora.gradient_checkpointing,
+        )
+
+    # đảm bảo head vẫn FP32 sau prepare
+    keep_classifier_fp32(base)
 
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
 
@@ -149,8 +157,8 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         lora_dropout=qlora.dropout,
         bias=qlora.bias,
         task_type=TaskType.SEQ_CLS,
-        target_modules=target_modules,     # không chứa "classifier"
-        modules_to_save=["classifier"],    # lưu và train head thường
+        target_modules=target_modules,
+        modules_to_save=["classifier"],
     )
     model = get_peft_model(base, lcfg)
 
@@ -200,7 +208,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         tokenizer=tokenizer,
         data_collator=collator,
         compute_metrics=compute_metrics,
-        label_names=["labels"],
+        # bỏ label_names vì phiên bản Trainer của bạn không hỗ trợ
     )
 
     trainer.train()
