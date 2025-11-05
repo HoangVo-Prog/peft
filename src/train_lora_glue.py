@@ -283,6 +283,7 @@ def main():
 
     # W&B
     p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")   
+    p.add_argument("--wandb_project", type=str, default=None)
     p.add_argument("--wandb_entity", type=str, default=None)
     p.add_argument("--wandb_run_name", type=str, default=None)
     p.add_argument("--wandb_offline_fallback", action="store_true")
