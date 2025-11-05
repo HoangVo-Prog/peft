@@ -1,9 +1,13 @@
+# qlora_glue_train.py
 from dataclasses import dataclass
 import os
 from typing import Optional, List
 from datetime import datetime
+import json
+import re
 
 import torch
+import torch.nn as nn
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
@@ -13,82 +17,174 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
+from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
+
+# ---- your project utils (unchanged) ----
 from src.utils.data import load_glue_and_tokenizer
 from src.utils.metrics import build_compute_metrics, get_best_metric_for_task
 from src.utils.config import RunConfig, is_regression_task
 from src.utils.wandb_utils import setup_wandb  # type: ignore
-
-from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 
 
 def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
-def guess_lora_target_modules(model):
-    names = [n for n, _ in model.named_modules()]
-    if any(n.endswith("q_proj") for n in names):
-        return ["q_proj", "k_proj", "v_proj", "o_proj"]
-    if any(n.endswith("query") for n in names):
-        return ["query", "key", "value"]
-    if any(n.endswith("c_attn") for n in names):
-        return ["c_attn"]
-    return ["query", "key", "value"]
+# ===================== LoRA helpers (model-agnostic) =====================
+
+FAMILY_PATTERNS = {
+    # LLaMA and friends
+    "llama_like": ["q_proj", "k_proj", "v_proj", "o_proj"],
+    # BERT / RoBERTa / XLM-R
+    "bert_like": ["query", "key", "value", "dense"],
+    # DeBERTa v2/v3
+    "deberta_v2_v3": ["query_proj", "key_proj", "value_proj", "dense"],
+    # GPT-2
+    "gpt2_like": ["c_attn"],
+    # GPT-NeoX / Falcon
+    "neox_falcon": ["query_key_value", "dense"],
+    # BLOOM
+    "bloom": ["query_key_value", "dense"],
+    # MPT
+    "mpt": ["Wqkv", "out_proj"],
+}
+
+def _all_module_names(model: nn.Module) -> List[str]:
+    return [n for n, _ in model.named_modules()]
+
+def _find_hits(names: List[str], tokens: List[str]) -> List[str]:
+    return [t for t in tokens if any(t in n for n in names)]
+
+def guess_lora_target_modules(model: nn.Module):
+    """
+    Detect attention proj names across families.
+    Return a list of substrings or the string 'all-linear' as a last resort.
+    """
+    names = _all_module_names(model)
+    order = [
+        "deberta_v2_v3",
+        "llama_like",
+        "bert_like",
+        "neox_falcon",
+        "bloom",
+        "mpt",
+        "gpt2_like",
+    ]
+    for fam in order:
+        hits = _find_hits(names, FAMILY_PATTERNS[fam])
+        if hits:
+            # For BERT/DeBERTa families, ensure 'dense' is included if present anywhere
+            if fam in ("deberta_v2_v3", "bert_like"):
+                if "dense" not in hits and any(
+                    n.endswith("dense") or n.endswith(".dense") or ".output.dense" in n
+                    for n in names
+                ):
+                    hits = sorted(set(hits + ["dense"]))
+            return sorted(set(hits))
+
+    # Generic regex pass
+    generic = set()
+    for n in names:
+        if re.search(r"(q(uery)?|k(ey)?|v(alue)?)_?proj", n):
+            if "q_proj" in n: generic.add("q_proj")
+            if "k_proj" in n: generic.add("k_proj")
+            if "v_proj" in n: generic.add("v_proj")
+            if "query_proj" in n: generic.add("query_proj")
+            if "key_proj" in n: generic.add("key_proj")
+            if "value_proj" in n: generic.add("value_proj")
+        if n.endswith("query"): generic.add("query")
+        if n.endswith("key"):   generic.add("key")
+        if n.endswith("value"): generic.add("value")
+        if n.endswith("dense") or ".output.dense" in n: generic.add("dense")
+    if generic:
+        return sorted(generic)
+
+    # Final fallback: all Linear layers (PEFT supports this)
+    return "all-linear"
+
+def pick_modules_to_save(model: nn.Module) -> List[str]:
+    """
+    Keep heads/poolers trainable and saved when present.
+    Works across many architectures.
+    """
+    candidates = ["classifier", "score", "lm_head", "pooler.dense"]
+    names = _all_module_names(model)
+    found = []
+    for c in candidates:
+        if any(n.endswith(c) or n.endswith(f".{c}") for n in names):
+            found.append(c)
+    return found or ["classifier"]
 
 
-def keep_classifier_fp32(model):
-    """Giữ classifier ở FP32 và thay Linear4bit nếu có."""
+# ===================== QLoRA-specific helpers =====================
+
+def keep_classifier_fp32(model: nn.Module):
+    """
+    Keep classifier head in fp32 even if inner layers are 4-bit.
+    Handles heads shaped as .classifier.dense/.out_proj or simple Linear.
+    """
     try:
-        import bitsandbytes as bnb
+        import bitsandbytes as bnb  # noqa
         Linear4bit = getattr(bnb.nn, "Linear4bit", tuple())
     except Exception:
         Linear4bit = tuple()
 
-    if hasattr(model, "classifier") and hasattr(model.classifier, "dense"):
-        if isinstance(model.classifier.dense, Linear4bit):
-            in_f = model.classifier.dense.in_features
-            out_f = model.classifier.dense.out_features
-            new_dense = torch.nn.Linear(in_f, out_f, bias=True).to(torch.float32)
-            try:
-                with torch.no_grad():
-                    new_dense.weight.copy_(model.classifier.dense.weight.float())
-                    if model.classifier.dense.bias is not None:
-                        new_dense.bias.copy_(model.classifier.dense.bias.float())
-            except Exception:
-                pass
-            model.classifier.dense = new_dense
+    def _upgrade(module_name: str):
+        mod = model
+        for part in module_name.split("."):
+            if hasattr(mod, part):
+                mod = getattr(mod, part)
+            else:
+                return False
 
-    if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
-        try:
-            import bitsandbytes as bnb
-            Linear4bit = getattr(bnb.nn, "Linear4bit", tuple())
-        except Exception:
-            Linear4bit = tuple()
-        if isinstance(model.classifier.out_proj, Linear4bit):
-            in_f = model.classifier.out_proj.in_features
-            out_f = model.classifier.out_proj.out_features
-            new_proj = torch.nn.Linear(in_f, out_f, bias=True).to(torch.float32)
+        if isinstance(mod, Linear4bit):
+            parent = model
+            parts = module_name.split(".")
+            for p in parts[:-1]:
+                parent = getattr(parent, p)
+            leaf_name = parts[-1]
+            in_f, out_f = mod.in_features, mod.out_features
+            new_lin = nn.Linear(in_f, out_f, bias=getattr(mod, "bias", None) is not None).to(torch.float32)
             try:
                 with torch.no_grad():
-                    new_proj.weight.copy_(model.classifier.out_proj.weight.float())
-                    if model.classifier.out_proj.bias is not None:
-                        new_proj.bias.copy_(model.classifier.out_proj.bias.float())
+                    new_lin.weight.copy_(mod.weight.float())
+                    if getattr(mod, "bias", None) is not None:
+                        new_lin.bias.copy_(mod.bias.float())
             except Exception:
                 pass
-            model.classifier.out_proj = new_proj
+            setattr(parent, leaf_name, new_lin)
+            return True
+        return False
+
+    # try common locations
+    _upgrade("classifier.dense")
+    _upgrade("classifier.out_proj")
+    # if classifier itself is Linear4bit
+    if hasattr(model, "classifier") and isinstance(getattr(model, "classifier"), Linear4bit):
+        cls = getattr(model, "classifier")
+        in_f, out_f = cls.in_features, cls.out_features
+        new_lin = nn.Linear(in_f, out_f, bias=getattr(cls, "bias", None) is not None).to(torch.float32)
+        try:
+            with torch.no_grad():
+                new_lin.weight.copy_(cls.weight.float())
+                if getattr(cls, "bias", None) is not None:
+                    new_lin.bias.copy_(cls.bias.float())
+        except Exception:
+            pass
+        model.classifier = new_lin
 
     if hasattr(model, "classifier"):
         model.classifier.to(torch.float32)
         for p in model.classifier.parameters():
             p.requires_grad = True
 
-
-def align_classifier_device(model):
-    """Đưa classifier về đúng device của model."""
+def align_classifier_device(model: nn.Module):
     dev = next(model.parameters()).device
     if hasattr(model, "classifier"):
         model.classifier.to(dev)
 
+
+# ===================== Args =====================
 
 @dataclass
 class QLoRAArgs:
@@ -102,13 +198,23 @@ class QLoRAArgs:
     quant_type: str = "nf4"  # "nf4" or "fp4"
 
 
+# ===================== Train =====================
+
 def train(cfg: RunConfig, qlora: QLoRAArgs):
     set_seed(qlora.seed)
 
+    # Data + tokenizer
     encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(
         cfg.task_name, cfg.model_name
     )
+    # clamp huge model_max_length to something sane
+    try:
+        if tokenizer.model_max_length is None or tokenizer.model_max_length > 4096:
+            tokenizer.model_max_length = 512
+    except Exception:
+        pass
 
+    # HF config
     hf_cfg = AutoConfig.from_pretrained(cfg.model_name, num_labels=num_labels)
     if is_regression_task(cfg.task_name):
         hf_cfg.problem_type = "regression"
@@ -123,7 +229,8 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         bnb_4bit_compute_dtype=compute_dtype,
     )
 
-    # QUAN TRỌNG: không dùng device_map="auto" để tránh sharding về CPU
+    # Load in 4-bit
+    # device_map=None + .to("cuda") keeps everything on a single GPU (Kaggle-style env)
     base = AutoModelForSequenceClassification.from_pretrained(
         cfg.model_name,
         config=hf_cfg,
@@ -131,14 +238,11 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         torch_dtype=compute_dtype,
         device_map=None,
     )
-
-    # Đưa toàn bộ model sang CUDA nếu có
     if torch.cuda.is_available():
         base.to("cuda")
 
-    # Giữ head FP32
+    # Keep head fp32 and on the right device
     keep_classifier_fp32(base)
-    # Căn lại device cho head
     align_classifier_device(base)
 
     # Gradient checkpointing
@@ -150,7 +254,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         except TypeError:
             base.gradient_checkpointing_enable()
 
-    # Prepare k-bit (tương thích peft cũ/mới)
+    # prepare k-bit
     try:
         base = prepare_model_for_kbit_training(
             base,
@@ -163,11 +267,13 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
             use_gradient_checkpointing=qlora.gradient_checkpointing,
         )
 
-    # Sau prepare, đảm bảo head vẫn đúng device
+    # after prepare, ensure head dtype/device are correct
     keep_classifier_fp32(base)
     align_classifier_device(base)
 
+    # Target modules + modules_to_save
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
+    modules_to_save = pick_modules_to_save(base)
 
     lcfg = LoraConfig(
         r=qlora.r,
@@ -175,13 +281,28 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         lora_dropout=qlora.dropout,
         bias=qlora.bias,
         task_type=TaskType.SEQ_CLS,
-        target_modules=target_modules,     # không gồm "classifier"
-        modules_to_save=["classifier"],    # lưu và train head thường
+        target_modules=target_modules,    # may be list or "all-linear"
+        modules_to_save=modules_to_save,  # keep head/pooler trainable
     )
-    model = get_peft_model(base, lcfg)
 
-    # Sau khi bọc PEFT, căn device một lần nữa
-    align_classifier_device(model)
+    # Optional sanity check when target_modules is a list
+    if isinstance(target_modules, list):
+        hit_names = [
+            n for n, m in base.named_modules()
+            if isinstance(m, nn.Linear) and any(t in n for t in target_modules)
+        ]
+        if len(hit_names) == 0:
+            example_names = [n for n, _ in list(base.named_modules())[:40]]
+            raise RuntimeError(
+                f"No matching modules for {target_modules}. "
+                f"Example module names: {example_names}"
+            )
+
+    model = get_peft_model(base, lcfg)
+    try:
+        model.print_trainable_parameters()
+    except Exception:
+        pass
 
     metric_for_best = get_best_metric_for_task(cfg.task_name)
 
@@ -207,7 +328,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
         num_train_epochs=cfg.num_train_epochs,
         weight_decay=cfg.weight_decay,
-        eval_strategy="epoch",
+        evaluation_strategy="epoch",     # fix: use evaluation_strategy (not eval_strategy)
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model=metric_for_best,
@@ -220,34 +341,37 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     )
 
     compute_metrics = build_compute_metrics(cfg.task_name)
+    eval_split = (
+        encoded["validation_mismatched"]
+        if "validation_mismatched" in encoded
+        else encoded["validation"]
+    )
 
     trainer = Trainer(
         model=model,
         args=args,
         train_dataset=encoded["train"],
-        eval_dataset=encoded["validation_mismatched"] if "validation_mismatched" in encoded else encoded["validation"],
+        eval_dataset=eval_split,
         tokenizer=tokenizer,
         data_collator=collator,
         compute_metrics=compute_metrics,
-        # không truyền label_names vì bản Transformers của bạn không hỗ trợ
     )
 
     trainer.train()
 
-    # Save adapter và tokenizer
+    # Save adapter + tokenizer
     trainer.model.save_pretrained(cfg.output_dir)
     tokenizer.save_pretrained(cfg.output_dir)
 
     metrics = trainer.evaluate()
     with open(os.path.join(cfg.output_dir, "eval_metrics.json"), "w") as f:
-        import json
         json.dump(metrics, f, indent=2)
 
     return metrics
 
 
 def main():
-    import argparse, json
+    import argparse
     p = argparse.ArgumentParser(description="GLUE QLoRA finetune")
     p.add_argument("--task_name", type=str, default="sst2")
     p.add_argument("--model_name", type=str, default="bert-base-uncased")
@@ -264,13 +388,13 @@ def main():
     p.add_argument("--lora_alpha", type=int, default=32)
     p.add_argument("--lora_dropout", type=float, default=0.05)
     p.add_argument("--lora_bias", type=str, default="none")
-    p.add_argument("--lora_target_modules", type=str, default="")  # comma separated, empty to auto
+    p.add_argument("--lora_target_modules", type=str, default="")  # comma-separated; empty => auto
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--gradient_checkpointing", action="store_true")
     p.add_argument("--quant_type", type=str, default="nf4")
 
     # W&B
-    p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")
+    p.add_argument("--wandb_enable", action="store_true")
     p.add_argument("--wandb_project", type=str, default=None)
     p.add_argument("--wandb_entity", type=str, default=None)
     p.add_argument("--wandb_run_name", type=str, default=None)
@@ -292,7 +416,7 @@ def main():
         wandb_entity=args.wandb_entity,
         wandb_run_name=args.wandb_run_name,
         wandb_offline_fallback=args.wandb_offline_fallback,
-        wandb_enable=bool(args.wandb_project),
+        wandb_enable=bool(args.wandb_enable and args.wandb_project),
     )
 
     tmods = [s.strip() for s in args.lora_target_modules.split(",") if s.strip()] or None
