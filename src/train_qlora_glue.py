@@ -37,10 +37,7 @@ def guess_lora_target_modules(model):
 
 
 def keep_classifier_fp32(model):
-    """
-    Giữ nguyên classifier ở FP32. Nếu đã bị Linear4bit thì thay lại bằng Linear thường.
-    Hỗ trợ .dense và .out_proj của RoBERTa.
-    """
+    """Giữ classifier ở FP32 và thay Linear4bit nếu có."""
     try:
         import bitsandbytes as bnb
         Linear4bit = getattr(bnb.nn, "Linear4bit", tuple())
@@ -62,6 +59,11 @@ def keep_classifier_fp32(model):
             model.classifier.dense = new_dense
 
     if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
+        try:
+            import bitsandbytes as bnb
+            Linear4bit = getattr(bnb.nn, "Linear4bit", tuple())
+        except Exception:
+            Linear4bit = tuple()
         if isinstance(model.classifier.out_proj, Linear4bit):
             in_f = model.classifier.out_proj.in_features
             out_f = model.classifier.out_proj.out_features
@@ -79,6 +81,13 @@ def keep_classifier_fp32(model):
         model.classifier.to(torch.float32)
         for p in model.classifier.parameters():
             p.requires_grad = True
+
+
+def align_classifier_device(model):
+    """Đưa classifier về đúng device của model."""
+    dev = next(model.parameters()).device
+    if hasattr(model, "classifier"):
+        model.classifier.to(dev)
 
 
 @dataclass
@@ -114,17 +123,25 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         bnb_4bit_compute_dtype=compute_dtype,
     )
 
+    # QUAN TRỌNG: không dùng device_map="auto" để tránh sharding về CPU
     base = AutoModelForSequenceClassification.from_pretrained(
         cfg.model_name,
         config=hf_cfg,
         quantization_config=bnb_cfg,
-        device_map="auto",
+        torch_dtype=compute_dtype,
+        device_map=None,
     )
 
-    # giữ head FP32
-    keep_classifier_fp32(base)
+    # Đưa toàn bộ model sang CUDA nếu có
+    if torch.cuda.is_available():
+        base.to("cuda")
 
-    # gradient checkpointing
+    # Giữ head FP32
+    keep_classifier_fp32(base)
+    # Căn lại device cho head
+    align_classifier_device(base)
+
+    # Gradient checkpointing
     if qlora.gradient_checkpointing:
         try:
             base.gradient_checkpointing_enable(
@@ -133,7 +150,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         except TypeError:
             base.gradient_checkpointing_enable()
 
-    # prepare k-bit, tương thích PEFT cũ và mới
+    # Prepare k-bit (tương thích peft cũ/mới)
     try:
         base = prepare_model_for_kbit_training(
             base,
@@ -146,8 +163,9 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
             use_gradient_checkpointing=qlora.gradient_checkpointing,
         )
 
-    # đảm bảo head vẫn FP32 sau prepare
+    # Sau prepare, đảm bảo head vẫn đúng device
     keep_classifier_fp32(base)
+    align_classifier_device(base)
 
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
 
@@ -157,10 +175,13 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         lora_dropout=qlora.dropout,
         bias=qlora.bias,
         task_type=TaskType.SEQ_CLS,
-        target_modules=target_modules,
-        modules_to_save=["classifier"],
+        target_modules=target_modules,     # không gồm "classifier"
+        modules_to_save=["classifier"],    # lưu và train head thường
     )
     model = get_peft_model(base, lcfg)
+
+    # Sau khi bọc PEFT, căn device một lần nữa
+    align_classifier_device(model)
 
     metric_for_best = get_best_metric_for_task(cfg.task_name)
 
@@ -208,12 +229,12 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         tokenizer=tokenizer,
         data_collator=collator,
         compute_metrics=compute_metrics,
-        # bỏ label_names vì phiên bản Trainer của bạn không hỗ trợ
+        # không truyền label_names vì bản Transformers của bạn không hỗ trợ
     )
 
     trainer.train()
 
-    # Save adapter and tokenizer
+    # Save adapter và tokenizer
     trainer.model.save_pretrained(cfg.output_dir)
     tokenizer.save_pretrained(cfg.output_dir)
 
