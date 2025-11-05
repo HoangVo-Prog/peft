@@ -7,7 +7,7 @@ from typing import Optional, Tuple, Dict
 @dataclass
 class RunConfig:
     task_name: str = "sst2" # cola sst2 mrpc qqp stsb mnli qnli rte wnli
-    model_name: str = "bert-base-uncased"
+    model_name: str = None 
     output_dir: str = "./outputs"
     num_train_epochs: float = 3.0
     per_device_train_batch_size: int = 32
