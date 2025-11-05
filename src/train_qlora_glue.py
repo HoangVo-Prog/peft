@@ -328,7 +328,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
         num_train_epochs=cfg.num_train_epochs,
         weight_decay=cfg.weight_decay,
-        evaluation_strategy="epoch",     # fix: use evaluation_strategy (not eval_strategy)
+        eval_strategy="epoch",     # fix: use evaluation_strategy (not eval_strategy)
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model=metric_for_best,
