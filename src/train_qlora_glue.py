@@ -183,6 +183,7 @@ def main():
     p.add_argument("--quant_type", type=str, default="nf4")
 
     # W&B
+    p.add_argument("--wandb_enable", action="store_true")
     p.add_argument("--wandb_project", type=str, default=None)
     p.add_argument("--wandb_entity", type=str, default=None)
     p.add_argument("--wandb_run_name", type=str, default=None)
