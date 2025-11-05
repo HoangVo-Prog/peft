@@ -128,7 +128,6 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         report_to=report_targets,
         run_name=run_name,        
         seed=qlora.seed,
-        fp16=(compute_dtype==torch.float16),
         bf16=(compute_dtype==torch.bfloat16),
         optim="paged_adamw_8bit",
     )
