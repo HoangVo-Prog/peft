@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 import os
 from typing import Optional, List
@@ -19,25 +18,72 @@ from src.utils.metrics import build_compute_metrics, get_best_metric_for_task
 from src.utils.config import RunConfig, is_regression_task
 from src.utils.wandb_utils import setup_wandb  # type: ignore
 
-
 from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
+
 
 def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
+
 def guess_lora_target_modules(model):
     names = [n for n, _ in model.named_modules()]
-    # LLaMA/Mistral-like
+    # LLaMA or Mistral
     if any(n.endswith("q_proj") for n in names):
         return ["q_proj", "k_proj", "v_proj", "o_proj"]
-    # BERT/RoBERTa/DeBERTa-like
+    # BERT or RoBERTa or DeBERTa
     if any(n.endswith("query") for n in names):
         return ["query", "key", "value"]
-    # GPT-2
+    # GPT2
     if any(n.endswith("c_attn") for n in names):
         return ["c_attn"]
     # Fallback
     return ["query", "key", "value"]
+
+
+def keep_classifier_fp32(model):
+    """
+    Giữ nguyên classifier ở FP32.
+    Nếu đã bị bitsandbytes chuyển thành Linear4bit thì thay lại bằng Linear thường.
+    Hỗ trợ cấu trúc .dense và .out_proj của RoBERTa.
+    """
+    try:
+        import bitsandbytes as bnb
+        Linear4bit = getattr(bnb.nn, "Linear4bit", tuple())
+    except Exception:
+        Linear4bit = tuple()
+
+    if hasattr(model, "classifier") and hasattr(model.classifier, "dense"):
+        if isinstance(model.classifier.dense, Linear4bit):
+            in_f = model.classifier.dense.in_features
+            out_f = model.classifier.dense.out_features
+            new_dense = torch.nn.Linear(in_f, out_f, bias=True).to(torch.float32)
+            try:
+                with torch.no_grad():
+                    new_dense.weight.copy_(model.classifier.dense.weight.float())
+                    if model.classifier.dense.bias is not None:
+                        new_dense.bias.copy_(model.classifier.dense.bias.float())
+            except Exception:
+                pass
+            model.classifier.dense = new_dense
+
+    if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
+        if isinstance(model.classifier.out_proj, Linear4bit):
+            in_f = model.classifier.out_proj.in_features
+            out_f = model.classifier.out_proj.out_features
+            new_proj = torch.nn.Linear(in_f, out_f, bias=True).to(torch.float32)
+            try:
+                with torch.no_grad():
+                    new_proj.weight.copy_(model.classifier.out_proj.weight.float())
+                    if model.classifier.out_proj.bias is not None:
+                        new_proj.bias.copy_(model.classifier.out_proj.bias.float())
+            except Exception:
+                pass
+            model.classifier.out_proj = new_proj
+
+    if hasattr(model, "classifier"):
+        model.classifier.to(torch.float32)
+        for p in model.classifier.parameters():
+            p.requires_grad = True
 
 
 @dataclass
@@ -48,7 +94,7 @@ class QLoRAArgs:
     bias: str = "none"
     target_modules: Optional[List[str]] = None
     seed: int = 42
-    gradient_checkpointing: bool = True  # often helpful with 4-bit
+    gradient_checkpointing: bool = True
     quant_type: str = "nf4"  # "nf4" or "fp4"
 
 
@@ -64,7 +110,8 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         hf_cfg.problem_type = "regression"
 
     # 4-bit quantization config
-    compute_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16
+    bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+    compute_dtype = torch.bfloat16 if bf16_ok else torch.float16
     bnb_cfg = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=qlora.quant_type,
@@ -79,10 +126,22 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         device_map="auto",
     )
 
-    if qlora.gradient_checkpointing:
-        base.gradient_checkpointing_enable()
+    # Giữ nguyên head ở FP32, tránh 4-bit
+    keep_classifier_fp32(base)
 
-    base = prepare_model_for_kbit_training(base, use_gradient_checkpointing=qlora.gradient_checkpointing)
+    # Bật gradient checkpointing nếu cần, và thêm kwargs để sạch cảnh báo
+    if qlora.gradient_checkpointing:
+        try:
+            base.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+        except TypeError:
+            base.gradient_checkpointing_enable()
+
+    # Chuẩn bị k-bit, báo cho PEFT biết output head để giữ nguyên
+    base = prepare_model_for_kbit_training(
+        base,
+        use_gradient_checkpointing=qlora.gradient_checkpointing,
+        output_embedding_layer_name="classifier",
+    )
 
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
 
@@ -92,13 +151,14 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         lora_dropout=qlora.dropout,
         bias=qlora.bias,
         task_type=TaskType.SEQ_CLS,
-        target_modules=target_modules,
+        target_modules=target_modules,     # không chứa "classifier"
+        modules_to_save=["classifier"],    # lưu và train head thường
     )
     model = get_peft_model(base, lcfg)
 
     metric_for_best = get_best_metric_for_task(cfg.task_name)
 
-    # W&B if configured
+    # W&B
     if cfg.wandb_enable:
         run_name = setup_wandb(
             task=cfg.task_name,
@@ -126,9 +186,9 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         metric_for_best_model=metric_for_best,
         logging_steps=cfg.logging_steps,
         report_to=report_targets,
-        run_name=run_name,        
+        run_name=run_name,
         seed=qlora.seed,
-        bf16=(compute_dtype==torch.bfloat16),
+        bf16=(compute_dtype == torch.bfloat16),
         optim="paged_adamw_8bit",
     )
 
@@ -142,6 +202,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         tokenizer=tokenizer,
         data_collator=collator,
         compute_metrics=compute_metrics,
+        label_names=["labels"],
     )
 
     trainer.train()
@@ -176,7 +237,7 @@ def main():
     p.add_argument("--lora_alpha", type=int, default=32)
     p.add_argument("--lora_dropout", type=float, default=0.05)
     p.add_argument("--lora_bias", type=str, default="none")
-    p.add_argument("--lora_target_modules", type=str, default="")  # comma-separated, empty to auto
+    p.add_argument("--lora_target_modules", type=str, default="")  # comma separated, empty to auto
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--gradient_checkpointing", action="store_true")
     p.add_argument("--quant_type", type=str, default="nf4")
