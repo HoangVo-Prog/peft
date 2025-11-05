@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================
-# run_ft_models.sh
+# train_ft.sh
 # Usage:
 #   bash run_ft_models.sh <task_name> [model_name]
 #   ALLOW_GPU_RESET=1 GPU_ID=0 bash run_ft_models.sh sst2
