@@ -136,11 +136,9 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         except TypeError:
             base.gradient_checkpointing_enable()
 
-    # Chuẩn bị k-bit, báo cho PEFT biết output head để giữ nguyên
     base = prepare_model_for_kbit_training(
         base,
         use_gradient_checkpointing=qlora.gradient_checkpointing,
-        output_embedding_layer_name="classifier",
     )
 
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
