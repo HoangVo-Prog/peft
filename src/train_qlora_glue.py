@@ -319,6 +319,15 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     # Keep head fp32 and on the right device
     keep_classifier_fp32(base)
     align_classifier_device(base)
+    
+    # Verify that pooler.dense is not Linear4bit anymore
+    if hasattr(base, "pooler") and hasattr(base.pooler, "dense"):
+        try:
+            import bitsandbytes as bnb
+            if isinstance(base.pooler.dense, bnb.nn.Linear4bit):
+                raise RuntimeError("pooler.dense is still Linear4bit after conversion!")
+        except ImportError:
+            pass
 
     # Gradient checkpointing
     if qlora.gradient_checkpointing:
