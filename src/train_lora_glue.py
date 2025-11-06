@@ -36,7 +36,7 @@ FAMILY_PATTERNS = {
     "llama_like": ["q_proj", "k_proj", "v_proj", "o_proj"],
     # BERT, RoBERTa, XLM-R
     "bert_like": ["query", "key", "value", "dense"],
-    # DeBERTa v2 and v3
+    # DeBERTa v2 and v3 - FIXED: These use _proj suffix
     "deberta_v2_v3": ["query_proj", "key_proj", "value_proj", "dense"],
     # GPT-2
     "gpt2_like": ["c_attn"],
@@ -54,8 +54,10 @@ def _all_module_names(model: nn.Module) -> List[str]:
 
 
 def _find_hits(names: List[str], tokens: List[str]) -> List[str]:
+    """Find which tokens appear as substrings in any module name."""
     found = []
     for t in tokens:
+        # Check if this token appears in ANY module name
         if any(t in n for n in names):
             found.append(t)
     return found
@@ -68,7 +70,12 @@ def guess_lora_target_modules(model: nn.Module):
     Returns a list of substrings or the string 'all-linear'.
     """
     names = _all_module_names(model)
-
+    
+    # Print first 30 module names for debugging
+    print(f"DEBUG: First 30 module names:")
+    for i, name in enumerate(names[:30]):
+        print(f"  {name}")
+    
     order = [
         "deberta_v2_v3",
         "llama_like",
@@ -81,30 +88,38 @@ def guess_lora_target_modules(model: nn.Module):
     for fam in order:
         hits = _find_hits(names, FAMILY_PATTERNS[fam])
         if hits:
-            # ensure dense is included for bert-like families if present anywhere
+            print(f"DEBUG: Found family '{fam}' with modules: {hits}")
+            # For DeBERTa and BERT-like, ensure dense is included
             if fam in ("deberta_v2_v3", "bert_like"):
-                if "dense" not in hits and any(n.endswith("dense") or n.endswith(".dense") or ".output.dense" in n for n in names):
+                # Check if 'dense' exists in module names
+                has_dense = any("dense" in n for n in names)
+                if has_dense and "dense" not in hits:
                     hits = sorted(set(hits + ["dense"]))
             return sorted(set(hits))
 
     # generic regex scan for attention projections and dense
     generic = set()
     for n in names:
-        if re.search(r"(q(uery)?|k(ey)?|v(alue)?)_?proj$", n):
+        # Match various attention projection patterns
+        if re.search(r"(q(uery)?|k(ey)?|v(alue)?)(_proj|\.proj)?", n, re.IGNORECASE):
             if "q_proj" in n: generic.add("q_proj")
             if "k_proj" in n: generic.add("k_proj")
             if "v_proj" in n: generic.add("v_proj")
-            if n.endswith("query_proj"): generic.add("query_proj")
-            if n.endswith("key_proj"): generic.add("key_proj")
-            if n.endswith("value_proj"): generic.add("value_proj")
-        if n.endswith("query"): generic.add("query")
-        if n.endswith("key"):   generic.add("key")
-        if n.endswith("value"): generic.add("value")
-        if n.endswith("dense") or ".output.dense" in n: generic.add("dense")
+            if "query_proj" in n: generic.add("query_proj")
+            if "key_proj" in n: generic.add("key_proj")
+            if "value_proj" in n: generic.add("value_proj")
+            if n.endswith("query"): generic.add("query")
+            if n.endswith("key"): generic.add("key")
+            if n.endswith("value"): generic.add("value")
+        if "dense" in n:
+            generic.add("dense")
+    
     if generic:
+        print(f"DEBUG: Generic scan found modules: {sorted(generic)}")
         return sorted(generic)
 
     # final fallback
+    print("DEBUG: No specific modules found, falling back to 'all-linear'")
     return "all-linear"
 
 
@@ -116,7 +131,7 @@ def pick_modules_to_save(model: nn.Module) -> List[str]:
     names = _all_module_names(model)
     found = []
     for c in candidates:
-        if any(n.endswith(c) or n.endswith(f".{c}") for n in names):
+        if any(n.endswith(c) or n.endswith(f".{c}") or f".{c}." in n for n in names):
             found.append(c)
     return found or ["classifier"]
 
@@ -161,6 +176,12 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     # Guess LoRA target modules if not provided
     target_modules = lora.target_modules or guess_lora_target_modules(base)
     modules_to_save = pick_modules_to_save(base)
+    
+    print(f"\n{'='*60}")
+    print(f"LoRA Configuration:")
+    print(f"  Target modules: {target_modules}")
+    print(f"  Modules to save: {modules_to_save}")
+    print(f"{'='*60}\n")
 
     lcfg = LoraConfig(
         r=lora.r,
@@ -178,6 +199,12 @@ def train(cfg: RunConfig, lora: LoRAArgs):
             n for n, m in base.named_modules()
             if isinstance(m, nn.Linear) and any(t in n for t in target_modules)
         ]
+        print(f"Found {len(hit_names)} matching Linear modules:")
+        for name in hit_names[:10]:  # Print first 10
+            print(f"  - {name}")
+        if len(hit_names) > 10:
+            print(f"  ... and {len(hit_names) - 10} more")
+        
         if len(hit_names) == 0:
             example_names = [n for n, _ in list(base.named_modules())[:30]]
             raise RuntimeError(
