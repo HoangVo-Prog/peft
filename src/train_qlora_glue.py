@@ -350,6 +350,9 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
     modules_to_save = pick_modules_to_save(base)
 
+    keep_classifier_fp32(base)
+    align_classifier_device(base)
+    
     lcfg = LoraConfig(
         r=qlora.r,
         lora_alpha=qlora.alpha,
