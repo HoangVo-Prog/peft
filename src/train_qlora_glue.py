@@ -338,7 +338,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         except TypeError:
             base.gradient_checkpointing_enable()
 
-    # prepare k-bit
+     # prepare k-bit
     try:
         base = prepare_model_for_kbit_training(
             base,
@@ -351,16 +351,23 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
             use_gradient_checkpointing=qlora.gradient_checkpointing,
         )
 
-    # after prepare, ensure head dtype/device are correct
-    keep_classifier_fp32(base)
-    align_classifier_device(base)
-
     # Target modules + modules_to_save
     target_modules = qlora.target_modules or guess_lora_target_modules(base)
     modules_to_save = pick_modules_to_save(base)
-
+    
+    # CRITICAL: Convert modules_to_save to fp32 BEFORE get_peft_model
+    # This prevents the Linear4bit quantization state assertion error
     keep_classifier_fp32(base)
     align_classifier_device(base)
+    
+    # Verify that pooler.dense is not Linear4bit anymore
+    if hasattr(base, "pooler") and hasattr(base.pooler, "dense"):
+        try:
+            import bitsandbytes as bnb
+            if isinstance(base.pooler.dense, bnb.nn.Linear4bit):
+                raise RuntimeError("pooler.dense is still Linear4bit after conversion!")
+        except ImportError:
+            pass
     
     lcfg = LoraConfig(
         r=qlora.r,
