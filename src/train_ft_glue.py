@@ -196,7 +196,6 @@ def train(cfg: RunConfig) -> None:
     
     run_summary = {
         "task": task,
-        "model_name": cfg.model_name,
         "precision": precision,
         "num_parameters": int(num_params),
         "train_time_sec": float(train_time),
@@ -255,28 +254,25 @@ def main() -> None:
     args = parse_args()
     cfg = RunConfig(**vars(args))
     if not cfg.all:
-        train(cfg)
+        summaries = [train(cfg)]
+    else:   
+        run_cfg = cfg
+        summaries = {
+            "model_name": args.model_name,
+            "task": []
+        }
+        for task in GLUE_TASKS:
+            print(f"========================================= {task} =========================================")
+            run_cfg.task_name = task
+            
+            summary = train(run_cfg)
+            summaries["task"].append(summary)
         
-    run_cfg = cfg
-    summaries = []
-    for task in GLUE_TASKS:
-        print(f"========================================= {task} =========================================")
-        run_cfg.task_name = task
-        
-        summary = train(run_cfg)
-        summaries.append(summary)
-        
-    aggregated = {
-        "model_name": args.model_name,
-        "precision": summaries["precision"],   # compute once from args.fp16 / args.bf16
-        "tasks": {summaries["task"]: s for s in summaries},
-    }
-
-    out_name = f"metrics_all_tasks_{summaries['precision']}.json"
+    out_name = f"metrics_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
     with open(out_path, "w") as f:
-        json.dump(aggregated, f, indent=2)
-    print(f"Saved aggregated metrics to: {out_path}")
+        json.dump(summaries, f, indent=2)
+    print(f"Saved summatries metrics to: {out_path}")
 
 if __name__ == "__main__":
     main()
