@@ -260,6 +260,7 @@ def main() -> None:
     run_cfg = cfg
     summaries = []
     for task in GLUE_TASKS:
+        print(f"========================================= {task} =========================================")
         run_cfg.task_name = task
         
         summary = train(run_cfg)
