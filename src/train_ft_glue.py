@@ -31,6 +31,9 @@ def _timestamp() -> str:
 
 def train(cfg: RunConfig) -> None:
     os.makedirs(cfg.output_dir, exist_ok=True)
+    out_dir = os.path.join(cfg.output, cfg.task)
+    os.makedirs(out_dir, exist_ok=True)
+    
     set_seed(cfg.seed)
     
     if cfg.fp16:
@@ -39,7 +42,6 @@ def train(cfg: RunConfig) -> None:
         precision = "bf16"
     else:
         precision = "fp32"
-
 
     task = cfg.task_name.lower()
 
@@ -50,6 +52,7 @@ def train(cfg: RunConfig) -> None:
     config = AutoConfig.from_pretrained(cfg.model_name, num_labels=num_labels)
     if is_regression_task(task):
         config.problem_type = "regression"
+        
     model = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=config)
     num_params = model.num_parameters() if hasattr(model, "num_parameters") else sum(p.numel() for p in model.parameters())
 
@@ -83,7 +86,7 @@ def train(cfg: RunConfig) -> None:
 
     # TrainingArguments
     args = TrainingArguments(
-        output_dir=cfg.output_dir,
+        output_dir=out_dir,
         learning_rate=cfg.learning_rate,
         per_device_train_batch_size=cfg.per_device_train_batch_size,
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
@@ -127,7 +130,7 @@ def train(cfg: RunConfig) -> None:
         pass
 
     # Save best
-    best_dir = os.path.join(cfg.output_dir, "best_model")
+    best_dir = os.path.join(out_dir, f"best_model")
     os.makedirs(best_dir, exist_ok=True)
     trainer.save_model(best_dir)
     tokenizer.save_pretrained(best_dir)
@@ -155,17 +158,17 @@ def train(cfg: RunConfig) -> None:
     else:
         mm_metrics = None
 
-    with open(os.path.join(cfg.output_dir, "val_metrics.json"), "w") as f:
+    with open(os.path.join(out_dir, f"val_metrics.json"), "w") as f:
         json.dump(val_metrics, f, indent=2)
     if mm_metrics is not None:
-        with open(os.path.join(cfg.output_dir, "val_mm_metrics.json"), "w") as f:
+        with open(os.path.join(out_dir, f"val_mm_metrics.json"), "w") as f:
             json.dump(mm_metrics, f, indent=2)
 
     # Dump logits for later analysis
     def dump_preds(ds, name: str) -> None:
         preds = trainer.predict(ds)
-        np.save(os.path.join(cfg.output_dir, f"{name}_logits.npy"), preds.predictions)
-        np.save(os.path.join(cfg.output_dir, f"{name}_labels.npy"), preds.label_ids)
+        np.save(os.path.join(out_dir, f"{name}_logits.npy"), preds.predictions)
+        np.save(os.path.join(out_dir, f"{name}_labels_.npy"), preds.label_ids)
 
     dump_preds(eval_ds, "val")
     if eval_mm_ds is not None:
@@ -181,7 +184,7 @@ def train(cfg: RunConfig) -> None:
                 test_ds = test_ds.remove_columns(col)
         try:
             test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
-            np.save(os.path.join(cfg.output_dir, "test_logits.npy"), test_preds)
+            np.save(os.path.join(out_dir, f"test_logits.npy"), test_preds)
         except Exception as e:
             print("[WARN] Skipping test prediction due to:", e)
 
@@ -201,13 +204,11 @@ def train(cfg: RunConfig) -> None:
         "train_time_sec": float(train_time),
         "val_metrics": val_metrics,
         "val_mm_metrics": mm_metrics,
-        "seed": cfg.seed,
-        "output_dir": cfg.output_dir,
     }
     
     summary_path = os.path.join(
-        cfg.output_dir,
-        f"metrics_{task}_{precision}.json"
+        out_dir,
+        f"metrics_{cfg.model_name}_{task}_{precision}.json"
     )
     with open(summary_path, "w") as f:
         json.dump(run_summary, f, indent=2)

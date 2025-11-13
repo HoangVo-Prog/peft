@@ -174,10 +174,9 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     train_time = time.perf_counter() - start_time
     
     # Save adapter and tokenizer
-    trainer.model.save_pretrained(cfg.output_dir)
+    trainer.model.save_pretrained(os.path.join(cfg.output_dir, task))
     tokenizer.save_pretrained(cfg.output_dir)
 
-    # Final eval
     # Eval
     val_metrics = trainer.evaluate(eval_dataset=eval_ds)
     print("Validation:", val_metrics)
@@ -188,7 +187,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
             wandb.log({f"val/{k}": v for k, v in val_metrics.items()})
         except Exception:
             pass
-        
+
     if eval_mm_ds is not None:
         mm_metrics = trainer.evaluate(eval_dataset=eval_mm_ds)
         print("Validation mismatched:", mm_metrics)
@@ -201,18 +200,17 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     else:
         mm_metrics = None
 
-
-    with open(os.path.join(cfg.output_dir, "val_metrics.json"), "w") as f:
+    with open(os.path.join(cfg.output_dir, f"val_metrics_{task}.json"), "w") as f:
         json.dump(val_metrics, f, indent=2)
     if mm_metrics is not None:
-        with open(os.path.join(cfg.output_dir, "val_mm_metrics.json"), "w") as f:
+        with open(os.path.join(cfg.output_dir, f"val_mm_metrics_{task}.json"), "w") as f:
             json.dump(mm_metrics, f, indent=2)
 
     # Dump logits for later analysis
     def dump_preds(ds, name: str) -> None:
         preds = trainer.predict(ds)
-        np.save(os.path.join(cfg.output_dir, f"{name}_logits.npy"), preds.predictions)
-        np.save(os.path.join(cfg.output_dir, f"{name}_labels.npy"), preds.label_ids)
+        np.save(os.path.join(cfg.output_dir, f"{name}_logits_{task}.npy"), preds.predictions)
+        np.save(os.path.join(cfg.output_dir, f"{name}_labels_{task}.npy"), preds.label_ids)
 
     dump_preds(eval_ds, "val")
     if eval_mm_ds is not None:
@@ -228,22 +226,25 @@ def train(cfg: RunConfig, lora: LoRAArgs):
                 test_ds = test_ds.remove_columns(col)
         try:
             test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
-            np.save(os.path.join(cfg.output_dir, "test_logits.npy"), test_preds)
+            np.save(os.path.join(cfg.output_dir, f"test_logits_{task}.npy"), test_preds)
         except Exception as e:
             print("[WARN] Skipping test prediction due to:", e)
 
+    try:
+        if cfg.wandb_enable:
+            import wandb  # type: ignore
+            wandb.finish()
+    except Exception:
+        pass
 
     run_summary = {
         "task": task,
-        "model_name": cfg.model_name,
         "num_parameters": int(total_params),
         "trainable_parameters": int(trainable_params),
         "trainable_ratio": trainable_ratio,
         "train_time_sec": float(train_time),
         "val_metrics": val_metrics,
         "val_mm_metrics": mm_metrics,
-        "seed": cfg.seed,
-        "output_dir": cfg.output_dir,
     }
 
     return run_summary
