@@ -33,7 +33,6 @@ def train(cfg: RunConfig) -> None:
     os.makedirs(cfg.output_dir, exist_ok=True)
     set_seed(cfg.seed)
     
-    num_params = model.num_parameters() if hasattr(model, "num_parameters") else sum(p.numel() for p in model.parameters())
     if cfg.fp16:
         precision = "fp16"
     elif cfg.bf16:
@@ -52,6 +51,7 @@ def train(cfg: RunConfig) -> None:
     if is_regression_task(task):
         config.problem_type = "regression"
     model = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=config)
+    num_params = model.num_parameters() if hasattr(model, "num_parameters") else sum(p.numel() for p in model.parameters())
 
     # Splits
     train_ds = encoded["train"]
