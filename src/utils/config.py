@@ -6,6 +6,7 @@ from typing import Optional, Tuple, Dict
 
 @dataclass
 class RunConfig:
+    all: str = None
     task_name: str = "sst2" # cola sst2 mrpc qqp stsb mnli qnli rte wnli
     model_name: str = None 
     output_dir: str = "./outputs"
