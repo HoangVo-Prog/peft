@@ -91,7 +91,7 @@ cleanup_between_models() {
 for MODEL in "${MODELS[@]}"; do
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
   SAFE_MODEL="${MODEL//\//_}"
-  OUTPUT_DIR="./outputs/${TASK}-${SAFE_MODEL}-${TIMESTAMP}"
+  OUTPUT_DIR="./outputs"
   mkdir -p "$OUTPUT_DIR"
 
   echo "===== Training $MODEL on $TASK ====="
