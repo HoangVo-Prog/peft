@@ -46,7 +46,7 @@ class LoRAArgs:
 def train(cfg: RunConfig, lora: LoRAArgs):
     
     os.makedirs(cfg.output_dir, exist_ok=True)
-    out_dir = os.path.join(cfg.output, cfg.task)
+    out_dir = os.path.join(cfg.output_dir, cfg.task_name)
     os.makedirs(out_dir, exist_ok=True)
     
     set_seed(lora.seed)
