@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 from datetime import datetime
+import time
 from typing import Optional
 
 import numpy as np
@@ -17,9 +18,8 @@ from transformers import (
     set_seed,
 )
 
-# NOTE: We use absolute imports so this script can live anywhere in the repo
-# as long as the project root (containing `src/`) is on PYTHONPATH.
-from src.utils.config import RunConfig, is_regression_task  # type: ignore
+
+from src.utils.config import RunConfig, is_regression_task, GLUE_TASKS  # type: ignore
 from src.utils.data import load_glue_and_tokenizer  # type: ignore
 from src.utils.metrics import build_compute_metrics, get_best_metric_for_task  # type: ignore
 from src.utils.wandb_utils import setup_wandb  # type: ignore
@@ -32,6 +32,15 @@ def _timestamp() -> str:
 def train(cfg: RunConfig) -> None:
     os.makedirs(cfg.output_dir, exist_ok=True)
     set_seed(cfg.seed)
+    
+    num_params = model.num_parameters() if hasattr(model, "num_parameters") else sum(p.numel() for p in model.parameters())
+    if cfg.fp16:
+        precision = "fp16"
+    elif cfg.bf16:
+        precision = "bf16"
+    else:
+        precision = "fp32"
+
 
     task = cfg.task_name.lower()
 
@@ -105,7 +114,9 @@ def train(cfg: RunConfig) -> None:
     )
 
     # Train
+    start_time = time.perf_counter()
     trainer.train()
+    train_time = time.perf_counter() - start_time
 
     # Final marker for W&B
     try:
@@ -182,12 +193,33 @@ def train(cfg: RunConfig) -> None:
             wandb.finish()
     except Exception:
         pass
-
+    
+    run_summary = {
+        "task": task,
+        "model_name": cfg.model_name,
+        "precision": precision,
+        "num_parameters": int(num_params),
+        "train_time_sec": float(train_time),
+        "val_metrics": val_metrics,
+        "val_mm_metrics": mm_metrics,
+        "seed": cfg.seed,
+        "output_dir": cfg.output_dir,
+    }
+    
+    summary_path = os.path.join(
+        cfg.output_dir,
+        f"metrics_{task}_{precision}.json"
+    )
+    with open(summary_path, "w") as f:
+        json.dump(run_summary, f, indent=2)
+        
+    return run_summary
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Unified GLUE fine-tuning (HF Trainer)")
 
     # Primary names
+    p.add_argument("--all", "--all_task", dest="all", action="store_true", help="Run all GLUE tasks defined in GLUE_TASKS")
     p.add_argument("--task", "--task_name", dest="task_name", type=str, default="sst2")
     p.add_argument("--model", "--model_name", dest="model_name", type=str, default="bert-base-uncased")
     p.add_argument("--output-dir", "--output_dir", dest="output_dir", type=str, default="./outputs")
@@ -222,8 +254,24 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     cfg = RunConfig(**vars(args))
-    train(cfg)
+    if not cfg.all:
+        train(cfg)
+        
+    run_cfg = cfg
+    for task in GLUE_TASKS:
+        run_cfg.task_name = task
+        
+        summaries = train(run_cfg)
+        aggregated = {
+            "model_name": args.model_name,
+            "precision": summaries["precision"],   # compute once from args.fp16 / args.bf16
+            "tasks": {s["task"]: s for s in summaries},
+        }
 
+        out_name = f"metrics_all_tasks_{summaries["precision"]}.json"
+        out_path = os.path.join(args.output_dir, out_name)
+        with open(out_path, "w") as f:
+            json.dump(aggregated, f, indent=2)
 
 if __name__ == "__main__":
     main()

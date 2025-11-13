@@ -44,8 +44,7 @@ GLUE_SENTENCE_KEYS: Dict[str, Tuple[Optional[str], Optional[str]]] = {
 "wnli": ("sentence1", "sentence2"),
 }
 
-
-
+GLUE_TASKS = tuple(GLUE_SENTENCE_KEYS.keys())
 
 def is_regression_task(task: str) -> bool:
     return task.lower() == "stsb"

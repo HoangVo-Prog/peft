@@ -3,20 +3,13 @@
 # ==========================================
 # train_ft.sh
 # Usage:
-#   bash run_ft_models.sh <task_name> [model_name]
-#   ALLOW_GPU_RESET=1 GPU_ID=0 bash run_ft_models.sh sst2
+#   bash run_ft_models.sh [model_name]
+#   ALLOW_GPU_RESET=1 GPU_ID=0 bash run_ft_models.sh 
 # ==========================================
 
 set -euo pipefail
 
-TASK=${1:-}
-MODEL_INPUT=${2:-}
-
-if [ -z "$TASK" ]; then
-  echo "Vui lòng truyền tên TASK khi chạy script."
-  echo "Cách dùng: bash run_ft_models.sh <task_name> [model_name]"
-  exit 1
-fi
+MODEL_INPUT=${1:-}
 
 # Hyperparams
 EPOCHS=3
@@ -103,7 +96,7 @@ for MODEL in "${MODELS[@]}"; do
 
   echo "===== Training $MODEL on $TASK ====="
   python -m src.train_ft_glue \
-    --task "$TASK" \
+    --all \
     --model "$MODEL" \
     --output-dir "$OUTPUT_DIR" \
     --epochs "$EPOCHS" \
