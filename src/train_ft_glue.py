@@ -30,8 +30,9 @@ def _timestamp() -> str:
 
 
 def train(cfg: RunConfig) -> None:
+    
     os.makedirs(cfg.output_dir, exist_ok=True)
-    out_dir = os.path.join(cfg.output, cfg.task)
+    out_dir = os.path.join(cfg.output_dir, cfg.task)
     os.makedirs(out_dir, exist_ok=True)
     
     set_seed(cfg.seed)

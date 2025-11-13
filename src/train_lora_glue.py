@@ -44,6 +44,11 @@ class LoRAArgs:
 
 
 def train(cfg: RunConfig, lora: LoRAArgs):
+    
+    os.makedirs(cfg.output_dir, exist_ok=True)
+    out_dir = os.path.join(cfg.output, cfg.task)
+    os.makedirs(out_dir, exist_ok=True)
+    
     set_seed(lora.seed)
 
     task = cfg.task_name.lower()
@@ -67,41 +72,15 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     if lora.gradient_checkpointing:
         base.gradient_checkpointing_enable()
 
-    # Guess LoRA target modules if not provided    
-    print(f"\n{'='*60}")
-    print(f"LoRA Configuration:")
-    print(f"  Target modules: {lora.target_modules}")
-    print(f"  Modules to save: {lora.modules_to_save}")
-    print(f"{'='*60}\n")
-
     lcfg = LoraConfig(
         r=lora.r,
         lora_alpha=lora.alpha,
         lora_dropout=lora.dropout,
         bias=lora.bias,
         task_type=TaskType.SEQ_CLS,
-        target_modules=lora.target_modules,     # list or 'all-linear'
-        modules_to_save=lora.modules_to_save,   # keep head or pooler
+        target_modules=lora.target_modules,    
+        modules_to_save=lora.modules_to_save,  
     )
-
-    # Optional sanity check if target_modules is a list
-    if isinstance(lora.target_modules, list):
-        hit_names = [
-            n for n, m in base.named_modules()
-            if isinstance(m, nn.Linear) and any(t in n for t in lora.target_modules)
-        ]
-        print(f"Found {len(hit_names)} matching Linear modules:")
-        for name in hit_names[:10]:  # Print first 10
-            print(f"  - {name}")
-        if len(hit_names) > 10:
-            print(f"  ... and {len(hit_names) - 10} more")
-        
-        if len(hit_names) == 0:
-            example_names = [n for n, _ in list(base.named_modules())[:30]]
-            raise RuntimeError(
-                f"No matching modules for {lora.target_modules}. "
-                f"Example module names: {example_names}"
-            )
 
     model = get_peft_model(base, lcfg)
     
@@ -140,7 +119,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         report_targets = ["none"]
 
     args = TrainingArguments(
-        output_dir=cfg.output_dir,
+        output_dir=out_dir,
         learning_rate=cfg.learning_rate,
         per_device_train_batch_size=cfg.per_device_train_batch_size,
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
