@@ -239,7 +239,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--bf16", dest="bf16", action="store_true")
 
     # Logging
-    p.add_argument("--logging-steps", dest="logging_steps", type=int, default=50)
+    p.add_argument("--logging-steps", dest="logging_steps", type=int, default=100)
 
     # W&B
     p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")
