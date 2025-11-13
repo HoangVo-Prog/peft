@@ -258,20 +258,24 @@ def main() -> None:
         train(cfg)
         
     run_cfg = cfg
+    summaries = []
     for task in GLUE_TASKS:
         run_cfg.task_name = task
         
-        summaries = train(run_cfg)
-        aggregated = {
-            "model_name": args.model_name,
-            "precision": summaries["precision"],   # compute once from args.fp16 / args.bf16
-            "tasks": {summaries["task"]},
-        }
+        summary = train(run_cfg)
+        summaries.append(summary)
+        
+    aggregated = {
+        "model_name": args.model_name,
+        "precision": summaries["precision"],   # compute once from args.fp16 / args.bf16
+        "tasks": {summaries["task"]: s for s in summaries},
+    }
 
-        out_name = f"metrics_all_tasks_{summaries['precision']}.json"
-        out_path = os.path.join(args.output_dir, out_name)
-        with open(out_path, "w") as f:
-            json.dump(aggregated, f, indent=2)
+    out_name = f"metrics_all_tasks_{summaries['precision']}.json"
+    out_path = os.path.join(args.output_dir, out_name)
+    with open(out_path, "w") as f:
+        json.dump(aggregated, f, indent=2)
+    print(f"Saved aggregated metrics to: {out_path}")
 
 if __name__ == "__main__":
     main()
