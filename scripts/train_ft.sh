@@ -94,7 +94,7 @@ for MODEL in "${MODELS[@]}"; do
   OUTPUT_DIR="./outputs"
   mkdir -p "$OUTPUT_DIR"
 
-  echo "===== Training $MODEL on $TASK ====="
+  echo "===== Training $MODEL====="
   python -m src.train_ft_glue \
     --all \
     --model "$MODEL" \
