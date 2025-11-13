@@ -268,7 +268,7 @@ def main() -> None:
             "tasks": {s["task"]: s for s in summaries},
         }
 
-        out_name = f"metrics_all_tasks_{summaries["precision"]}.json"
+        out_name = f"metrics_all_tasks_{summaries['precision']}.json"
         out_path = os.path.join(args.output_dir, out_name)
         with open(out_path, "w") as f:
             json.dump(aggregated, f, indent=2)
