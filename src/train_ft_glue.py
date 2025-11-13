@@ -265,7 +265,7 @@ def main() -> None:
         aggregated = {
             "model_name": args.model_name,
             "precision": summaries["precision"],   # compute once from args.fp16 / args.bf16
-            "tasks": {s["task"]: s for s in summaries},
+            "tasks": {summaries["task"]},
         }
 
         out_name = f"metrics_all_tasks_{summaries['precision']}.json"
