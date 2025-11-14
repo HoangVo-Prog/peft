@@ -20,7 +20,7 @@ class RunConfig:
     seed: int = 42
     save_strategy: str = "epoch" # or "steps"
     eval_strategy: str = "epoch" # or "steps"
-    save_total_limit: int = 2
+    save_total_limit: int = 1
     fp16: bool = True
     bf16: bool = False
     # W&B settings

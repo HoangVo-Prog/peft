@@ -127,6 +127,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         weight_decay=cfg.weight_decay,
         eval_strategy="epoch",
         save_strategy="epoch",
+        save_total_limit=cfg.save_total_limit,
         load_best_model_at_end=True,
         metric_for_best_model=best_metric,
         logging_steps=cfg.logging_steps,

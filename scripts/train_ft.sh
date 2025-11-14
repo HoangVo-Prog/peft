@@ -104,7 +104,6 @@ for MODEL in "${MODELS[@]}"; do
     --train-bsz "$TRAIN_BSZ" \
     --eval-bsz "$EVAL_BSZ" \
     --no-wandb \
-    --save-strategy no
 
   # Dọn dẹp trước khi sang model tiếp theo
   cleanup_between_models
