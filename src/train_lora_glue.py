@@ -302,10 +302,11 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     
-    summaries = {
-        "model_name": args.model_name,
-        "task": []
-    }
+    cfg = RunConfig()  # default
+
+    for k, v in vars(args).items():
+        if hasattr(cfg, k):
+            setattr(cfg, k, v)
     
     # LoRA config
     largs = LoRAArgs(
@@ -318,43 +319,17 @@ def main():
         gradient_checkpointing=args.gradient_checkpointing,
     )
     
+    summaries = {
+        "model_name": args.model_name,
+        "task": []
+    }
+    
     if not args.all:
-        cfg = RunConfig(
-            task_name=args.task_name,
-            model_name=args.model_name,
-            output_dir=args.output_dir,
-            num_train_epochs=args.num_train_epochs,
-            per_device_train_batch_size=args.per_device_train_batch_size,
-            per_device_eval_batch_size=args.per_device_eval_batch_size,
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay,
-            logging_steps=args.logging_steps,
-            wandb_project=args.wandb_project,
-            wandb_entity=args.wandb_entity,
-            wandb_run_name=args.wandb_run_name,
-            wandb_offline_fallback=args.wandb_offline_fallback,
-            wandb_enable=bool(args.wandb_enable and args.wandb_project),
-        )
         summaries.append(train(cfg, largs))
     else:
         for task in GLUE_TASKS:
             print(f"========================================= {task} =========================================")
-            cfg = RunConfig(
-                task_name=task,
-                model_name=args.model_name,
-                output_dir=args.output_dir,
-                num_train_epochs=args.num_train_epochs,
-                per_device_train_batch_size=args.per_device_train_batch_size,
-                per_device_eval_batch_size=args.per_device_eval_batch_size,
-                learning_rate=args.learning_rate,
-                weight_decay=args.weight_decay,
-                logging_steps=args.logging_steps,
-                wandb_project=args.wandb_project,
-                wandb_entity=args.wandb_entity,
-                wandb_run_name=args.wandb_run_name,
-                wandb_offline_fallback=args.wandb_offline_fallback,
-                wandb_enable=bool(args.wandb_enable and args.wandb_project),
-            )
+            cfg.task_name = task
             summaries.append(train(cfg, largs))
 
     

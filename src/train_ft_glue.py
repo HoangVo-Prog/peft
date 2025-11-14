@@ -258,7 +258,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    cfg = RunConfig(**vars(args))
+    cfg = RunConfig()  
+
+    for k, v in vars(args).items():
+        if hasattr(cfg, k):
+            setattr(cfg, k, v)
+            
     summaries = {
         "model_name": args.model_name,
         "task": [],
@@ -266,12 +271,10 @@ def main() -> None:
     if not cfg.all:
         summaries["task"].append(train(cfg))
     else:   
-        run_cfg = cfg
-        
         for task in GLUE_TASKS:
             print(f"========================================= {task} =========================================")
-            run_cfg.task_name = task            
-            summaries["task"].append(train(run_cfg))
+            cfg.task_name = task            
+            summaries["task"].append(train(cfg))
         
     model_name = str(args.model_name).replace("/", "_")
     out_name = f"{model_name}_all_tasks.json"

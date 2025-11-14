@@ -3,22 +3,13 @@
 # ==========================================
 # train_lora.sh
 # Usage:
-#   bash train_lora.sh <task_name> [model_name]
-#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_lora.sh sst2
+#   bash train_lora.sh [model_name] "query,key,value,dense"
+#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_lora.sh "query,key,value,dense"
 # ==========================================
 
 set -euo pipefail
 
-TASK=${1:-}
-MODEL_INPUT=${2:-}
-
-if [ -z "$TASK" ]; then
-  echo "Vui lòng truyền tên TASK khi chạy script."
-  echo "Cách dùng: bash train_lora.sh <task_name> [model_name]"
-  echo "Ví dụ: bash train_lora.sh sst2"
-  echo "Hoặc:  bash train_lora.sh sst2 roberta-base"
-  exit 1
-fi
+MODEL_INPUT=${1:-}
 
 # Hyperparams
 EPOCHS=3
@@ -101,9 +92,9 @@ for MODEL in "${MODELS[@]}"; do
   OUTPUT_DIR="./outputs/lora-${TASK}-${SAFE_MODEL}-${TIMESTAMP}"
   mkdir -p "$OUTPUT_DIR"
 
-  echo "===== Training LoRA on $MODEL for task $TASK ====="
+  echo "===== Training LoRA on $MODEL ====="
   python -m src.train_lora_glue \
-    --task_name "$TASK" \
+    --all \
     --model_name "$MODEL" \
     --output_dir "$OUTPUT_DIR" \
     --num_train_epochs "$EPOCHS" \
