@@ -11,11 +11,12 @@ set -euo pipefail
 
 MODEL_INPUT=${1:-}
 
+
 # Hyperparams
 EPOCHS=3
 LR=2e-5
-TRAIN_BSZ=32
-EVAL_BSZ=64
+TRAIN_BSZ=128
+EVAL_BSZ=256
 
 # Tinh chỉnh bộ nhớ allocator của PyTorch để giảm phân mảnh giữa các runs
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
