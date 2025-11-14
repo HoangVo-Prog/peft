@@ -272,7 +272,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora_alpha", type=int, default=32)
     p.add_argument("--lora_dropout", type=float, default=0.05)
     p.add_argument("--lora_bias", type=str, default="none")
-    p.add_argument("--lora_target_modules", type=str, nargs="+", default=["key", "query", "value"], help="List of target modules for LoRA") 
+    p.add_argument("--lora_target_modules", dest="target_modules", type=str, nargs="+", default=["key", "query", "value"], help="List of target modules for LoRA") 
     p.add_argument("--modules_to_save", type=str, nargs="+", default=["classifier"], help="Modules training no LoRA") 
     p.add_argument("--gradient_checkpointing", action="store_true")
 
