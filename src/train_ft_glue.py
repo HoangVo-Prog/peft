@@ -18,6 +18,8 @@ from transformers import (
     set_seed,
 )
 
+import shutil
+import glob
 
 from src.utils.config import RunConfig, is_regression_task, GLUE_TASKS  # type: ignore
 from src.utils.data import load_glue_and_tokenizer  # type: ignore
@@ -130,11 +132,11 @@ def train(cfg: RunConfig) -> None:
     except Exception:
         pass
 
-    # Save best
-    best_dir = os.path.join(out_dir, f"best_model")
-    os.makedirs(best_dir, exist_ok=True)
-    trainer.save_model(best_dir)
-    tokenizer.save_pretrained(best_dir)
+    # # Save best
+    # best_dir = os.path.join(out_dir, f"best_model")
+    # os.makedirs(best_dir, exist_ok=True)
+    # trainer.save_model(best_dir)
+    # tokenizer.save_pretrained(best_dir)
 
     # Eval
     val_metrics = trainer.evaluate(eval_dataset=eval_ds)
@@ -189,14 +191,15 @@ def train(cfg: RunConfig) -> None:
         except Exception as e:
             print("[WARN] Skipping test prediction due to:", e)
 
-    print("Saved best model to:", best_dir)
-
     try:
         if cfg.wandb_enable:
             import wandb  # type: ignore
             wandb.finish()
     except Exception:
         pass
+    
+    for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
+        shutil.rmtree(ckpt_dir)
     
     run_summary = {
         "task": task,
@@ -209,7 +212,7 @@ def train(cfg: RunConfig) -> None:
     
     summary_path = os.path.join(
         out_dir,
-        f"metrics_{cfg.model_name}_{task}_{precision}.json"
+        f"metrics_{task}_{precision}.json"
     )
     with open(summary_path, "w") as f:
         json.dump(run_summary, f, indent=2)
