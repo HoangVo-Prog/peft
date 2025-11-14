@@ -302,22 +302,16 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     
-    cfg = RunConfig()  # default
+    # Run config
+    cfg = RunConfig()  
+    # LoRA config
+    largs = LoRAArgs()
 
     for k, v in vars(args).items():
         if hasattr(cfg, k):
             setattr(cfg, k, v)
-    
-    # LoRA config
-    largs = LoRAArgs(
-        r=args.lora_r,
-        alpha=args.lora_alpha,
-        dropout=args.lora_dropout,
-        bias=args.lora_bias,
-        target_modules=args.lora_target_modules,
-        seed=args.seed,
-        gradient_checkpointing=args.gradient_checkpointing,
-    )
+        if hasattr(largs, k):
+            setattr(cfg, k, v)
     
     summaries = {
         "model_name": args.model_name,
