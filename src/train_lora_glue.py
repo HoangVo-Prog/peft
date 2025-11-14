@@ -25,7 +25,7 @@ from peft import LoraConfig, TaskType, get_peft_model
 
 from src.utils.data import load_glue_and_tokenizer
 from src.utils.metrics import build_compute_metrics, get_best_metric_for_task
-from src.utils.config import RunConfig, is_regression_task, GLUE_TASKS
+from src.utils.config import RunConfig, LoRAArgs, is_regression_task, GLUE_TASKS
 from src.utils.wandb_utils import setup_wandb  # type: ignore
 
 
@@ -33,19 +33,6 @@ def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 # ---------------- main training routine ----------------
-
-@dataclass
-class LoRAArgs:
-    r: int = 16
-    alpha: int = 32
-    dropout: float = 0.05
-    bias: str = "none"  # "none", "all", or "lora_only"
-    target_modules: List[str] = ["key", "query", "value"]
-    modules_to_save: List[str] = ["classifier"]
-    seed: int = 42
-    gradient_checkpointing: bool = False
-
-
 def train(cfg: RunConfig, lora: LoRAArgs):
     
     os.makedirs(cfg.output_dir, exist_ok=True)
