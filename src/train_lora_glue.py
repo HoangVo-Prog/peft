@@ -305,12 +305,12 @@ def main():
     }
     
     if not args.all:
-        summaries.append(train(cfg, largs))
+        summaries["task"].append(train(cfg, largs))
     else:
         for task in GLUE_TASKS:
             print(f"========================================= {task} =========================================")
             cfg.task_name = task
-            summaries.append(train(cfg, largs))
+            summaries["task"].append(train(cfg, largs))
 
     
     model_name = str(args.model_name).replace("/", "_")
