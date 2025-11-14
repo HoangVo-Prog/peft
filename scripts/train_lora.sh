@@ -3,15 +3,33 @@
 # ==========================================
 # train_lora.sh
 # Usage:
-#   bash train_lora.sh [model_name] "query,key,value,dense"
-#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_lora.sh "query,key,value,dense"
+#   bash train_lora.sh [model_name] --fp16 --bp16
+#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_lora.sh "roberta-base" --fp16
 # ==========================================
 
 set -euo pipefail
 
 MODEL_INPUT=${1:-}
 
+# ====================================================
+# Optional flags (default False)
+# ====================================================
+FP16_FLAG="--fp16 False"
+BP16_FLAG="--bp16 False"
+
+# Parse flags (fp16, bp16)
+for arg in "$@"; do
+  if [ "$arg" = "--fp16" ]; then
+    FP16_FLAG="--fp16 True"
+  fi
+  if [ "$arg" = "--bp16" ]; then
+    BP16_FLAG="--bp16 True"
+  fi
+done
+
+# ====================================================
 # Hyperparams
+# ====================================================
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=32
@@ -20,12 +38,10 @@ LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05
 
-# Nếu user không truyền env → dùng default list
+# target modules
 if [ -z "${LORA_TARGET_MODULES:-}" ]; then
   LORA_TARGET_MODULES=("query" "key" "value")
 else
-  # Nếu user truyền env dạng string → convert thành array
-  # Ví dụ: LORA_TARGET_MODULES="query key value dense"
   read -r -a LORA_TARGET_MODULES <<< "$LORA_TARGET_MODULES"
 fi
 
@@ -35,15 +51,13 @@ else
   read -r -a MODULES_TO_SAVE <<< "$MODULES_TO_SAVE"
 fi
 
-# Giảm phân mảnh bộ nhớ giữa các runs
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
 
-# Chọn GPU
 GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
-# Danh sách model mặc định hoặc chỉ model được truyền
-if [ -z "$MODEL_INPUT" ]; then
+# Default model list unless user passes one
+if [ -z "$MODEL_INPUT" ] || [[ "$MODEL_INPUT" == --* ]]; then
   MODELS=(
     "roberta-base"
     "roberta-large"
@@ -53,7 +67,7 @@ else
   MODELS=("$MODEL_INPUT")
 fi
 
-# ---------- Hàm dọn GPU giữa các model ----------
+# ---------- GPU cleanup utilities ----------
 
 gpu_soft_clear() {
   python - <<'PY' || true
@@ -98,15 +112,15 @@ cleanup_between_models() {
   echo "[Cleanup] Hoàn tất."
 }
 
-# ---------- Vòng lặp train LoRA ----------
+# ---------- Train Loop ----------
 
 for MODEL in "${MODELS[@]}"; do
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-  SAFE_MODEL="${MODEL//\//_}"
   OUTPUT_DIR="./outputs"
   mkdir -p "$OUTPUT_DIR"
 
   echo "===== Training LoRA on $MODEL ====="
+
   python -m src.train_lora_glue \
     --all \
     --model_name "$MODEL" \
@@ -118,7 +132,10 @@ for MODEL in "${MODELS[@]}"; do
     --lora_r "$LORA_R" \
     --lora_alpha "$LORA_ALPHA" \
     --lora_dropout "$LORA_DROPOUT" \
-    --lora_target_modules "$LORA_TARGET_MODULES" \
+    --lora_target_modules "${LORA_TARGET_MODULES[@]}" \
+    --modules_to_save "${MODULES_TO_SAVE[@]}" \
+    $FP16_FLAG \
+    $BP16_FLAG \
     --no-wandb
 
   cleanup_between_models
