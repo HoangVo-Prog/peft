@@ -21,6 +21,21 @@ LORA_ALPHA=32
 LORA_DROPOUT=0.05
 LORA_TARGET_MODULES="${LORA_TARGET_MODULES:-query,key,value}"
 
+# Nếu user không truyền env → dùng default list
+if [ -z "${LORA_TARGET_MODULES:-}" ]; then
+  LORA_TARGET_MODULES=("query" "key" "value")
+else
+  # Nếu user truyền env dạng string → convert thành array
+  # Ví dụ: LORA_TARGET_MODULES="query key value dense"
+  read -r -a LORA_TARGET_MODULES <<< "$LORA_TARGET_MODULES"
+fi
+
+if [ -z "${MODULES_TO_SAVE:-}" ]; then
+  MODULES_TO_SAVE=("classifier")
+else
+  read -r -a MODULES_TO_SAVE <<< "$MODULES_TO_SAVE"
+fi
+
 # Giảm phân mảnh bộ nhớ giữa các runs
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
 
