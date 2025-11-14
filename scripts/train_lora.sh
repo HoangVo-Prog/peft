@@ -19,7 +19,6 @@ EVAL_BSZ=64
 LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05
-LORA_TARGET_MODULES="${LORA_TARGET_MODULES:-query,key,value}"
 
 # Nếu user không truyền env → dùng default list
 if [ -z "${LORA_TARGET_MODULES:-}" ]; then
