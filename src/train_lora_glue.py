@@ -1,7 +1,6 @@
 # train_lora_glue.py
 from dataclasses import dataclass
 import os
-from typing import Optional, List
 from datetime import datetime
 import json
 import argparse
