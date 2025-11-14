@@ -18,6 +18,9 @@ from transformers import (
     set_seed,
 )
 
+import shutil
+import glob
+
 from peft import LoraConfig, TaskType, get_peft_model
 
 from src.utils.data import load_glue_and_tokenizer
@@ -50,6 +53,13 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     os.makedirs(out_dir, exist_ok=True)
     
     set_seed(lora.seed)
+    
+    if cfg.fp16:
+        precision = "fp16"
+    elif cfg.bf16:
+        precision = "bf16"
+    else:
+        precision = "fp32"
 
     task = cfg.task_name.lower()
 
@@ -88,6 +98,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     trainable_ratio = f"{100 * trainable_params / total_params:.4f}%"
     
+    train_ds = encoded["train"]
     if task == "mnli":
         eval_ds = encoded["validation_matched"]
         eval_mm_ds = encoded["validation_mismatched"]
@@ -125,8 +136,8 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
         num_train_epochs=cfg.num_train_epochs,
         weight_decay=cfg.weight_decay,
-        eval_strategy="epoch",
-        save_strategy="epoch",
+        eval_strategy=cfg.eval_strategy, 
+        save_strategy=cfg.save_stategy,
         save_total_limit=cfg.save_total_limit,
         load_best_model_at_end=True,
         metric_for_best_model=best_metric,
@@ -134,14 +145,15 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         report_to=report_targets,
         run_name=run_name,
         seed=lora.seed,
-        fp16=torch.cuda.is_available(),
-        optim="adamw_torch",
+        fp16=bool(cfg.fp16 and torch.cuda.is_available()), # TODO:
+        bf16=bool(cfg.bf16 and torch.cuda.is_available()),
+        optim="adamw_torch", # default optim
     )
 
     trainer = Trainer(
         model=model,
         args=args,
-        train_dataset=encoded["train"],
+        train_dataset=train_ds,
         eval_dataset=eval_ds,
         tokenizer=tokenizer,
         data_collator=collator,
@@ -153,9 +165,17 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     trainer.train()
     train_time = time.perf_counter() - start_time
     
-    # Save adapter and tokenizer
-    trainer.model.save_pretrained(os.path.join(cfg.output_dir, task))
-    tokenizer.save_pretrained(cfg.output_dir)
+    # Final marker for W&B
+    try:
+        if cfg.wandb_enable:
+            import wandb  # type: ignore
+            wandb.log({"final/global_step": trainer.state.global_step})
+    except Exception:
+        pass
+    
+    # # Save adapter and tokenizer
+    # trainer.model.save_pretrained(os.path.join(cfg.output_dir, task))
+    # tokenizer.save_pretrained(cfg.output_dir)
 
     # Eval
     val_metrics = trainer.evaluate(eval_dataset=eval_ds)
@@ -216,7 +236,11 @@ def train(cfg: RunConfig, lora: LoRAArgs):
             wandb.finish()
     except Exception:
         pass
-
+    
+    # Delete all checkpoints to save storage
+    for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
+        shutil.rmtree(ckpt_dir)
+    
     run_summary = {
         "task": task,
         "num_parameters": int(total_params),
@@ -226,6 +250,13 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         "val_metrics": val_metrics,
         "val_mm_metrics": mm_metrics,
     }
+    
+    summary_path = os.path.join(
+        out_dir,
+        f"metrics_{task}_{precision}.json"
+    )
+    with open(summary_path, "w") as f:
+        json.dump(run_summary, f, indent=2)
 
     return run_summary
 
@@ -240,7 +271,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--per_device_eval_batch_size", type=int, default=64)
     p.add_argument("--learning_rate", type=float, default=2e-5)
     p.add_argument("--weight_decay", type=float, default=0.01)
-    p.add_argument("--logging_steps", type=int, default=50)
+    p.add_argument("--logging_steps", type=int, default=100)
+
+    p.add_argument("--save-strategy", "--save_strategy", dest="save_strategy", type=str, default="epoch")
+    p.add_argument("--eval-strategy", "--eval_strategy", dest="eval_strategy", type=str, default="epoch")
+    p.add_argument("--save-total", "--save_total_limit", dest="save_total_limit", type=int, default=1)
+    
+    p.add_argument("--fp16", dest="fp16", action="store_true")
+    p.add_argument("--bf16", dest="bf16", action="store_true")
+
 
     # LoRA
     p.add_argument("--lora_r", type=int, default=16)
@@ -262,6 +301,11 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    
+    summaries = {
+        "model_name": args.model_name,
+        "task": []
+    }
     
     # LoRA config
     largs = LoRAArgs(
@@ -291,30 +335,35 @@ def main():
             wandb_offline_fallback=args.wandb_offline_fallback,
             wandb_enable=bool(args.wandb_enable and args.wandb_project),
         )
-    
-    for task in GLUE_TASKS:
-        print(f"========================================= {task} =========================================")
-        cfg = RunConfig(
-            task_name=task,
-            model_name=args.model_name,
-            output_dir=args.output_dir,
-            num_train_epochs=args.num_train_epochs,
-            per_device_train_batch_size=args.per_device_train_batch_size,
-            per_device_eval_batch_size=args.per_device_eval_batch_size,
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay,
-            logging_steps=args.logging_steps,
-            wandb_project=args.wandb_project,
-            wandb_entity=args.wandb_entity,
-            wandb_run_name=args.wandb_run_name,
-            wandb_offline_fallback=args.wandb_offline_fallback,
-            wandb_enable=bool(args.wandb_enable and args.wandb_project),
-        )
+        summaries.append(train(cfg, largs))
+    else:
+        for task in GLUE_TASKS:
+            print(f"========================================= {task} =========================================")
+            cfg = RunConfig(
+                task_name=task,
+                model_name=args.model_name,
+                output_dir=args.output_dir,
+                num_train_epochs=args.num_train_epochs,
+                per_device_train_batch_size=args.per_device_train_batch_size,
+                per_device_eval_batch_size=args.per_device_eval_batch_size,
+                learning_rate=args.learning_rate,
+                weight_decay=args.weight_decay,
+                logging_steps=args.logging_steps,
+                wandb_project=args.wandb_project,
+                wandb_entity=args.wandb_entity,
+                wandb_run_name=args.wandb_run_name,
+                wandb_offline_fallback=args.wandb_offline_fallback,
+                wandb_enable=bool(args.wandb_enable and args.wandb_project),
+            )
+            summaries.append(train(cfg, largs))
 
     
-
-    metrics = train(cfg, largs)
-    print(json.dumps(metrics, indent=2))
+    model_name = str(args.model_name).replace("/", "_")
+    out_name = f"{model_name}_all_tasks.json"
+    out_path = os.path.join(args.output_dir, out_name)
+    with open(out_path, "w") as f:
+        json.dump(summaries, f, indent=2)
+    print(f"Saved summatries metrics to: {out_path}")
 
 
 if __name__ == "__main__":

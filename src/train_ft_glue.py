@@ -198,6 +198,7 @@ def train(cfg: RunConfig) -> None:
     except Exception:
         pass
     
+    # Delete all checkpoints to save storage
     for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
         shutil.rmtree(ckpt_dir)
     
@@ -258,22 +259,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     cfg = RunConfig(**vars(args))
+    summaries = {
+        "model_name": args.model_name,
+        "task": [],
+    }
     if not cfg.all:
-        summaries = [train(cfg)]
+        summaries["task"].append(train(cfg))
     else:   
         run_cfg = cfg
-        summaries = {
-            "model_name": args.model_name,
-            "task": []
-        }
+        
         for task in GLUE_TASKS:
             print(f"========================================= {task} =========================================")
-            run_cfg.task_name = task
-            
-            summary = train(run_cfg)
-            summaries["task"].append(summary)
+            run_cfg.task_name = task            
+            summaries["task"].append(train(run_cfg))
         
-    out_name = f"metrics_all_tasks.json"
+    model_name = str(args.model_name).replace("/", "_")
+    out_name = f"{model_name}_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
     with open(out_path, "w") as f:
         json.dump(summaries, f, indent=2)
