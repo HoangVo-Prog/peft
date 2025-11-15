@@ -243,6 +243,24 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     )
     with open(summary_path, "w") as f:
         json.dump(run_summary, f, indent=2)
+        
+    del trainer
+    del model
+    del train_ds
+    del eval_ds
+    try:
+        del eval_mm_ds
+    except NameError:
+        pass
+    try:
+        del test_ds
+    except NameError:
+        pass
+
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return run_summary
 

@@ -4,17 +4,15 @@ set -euo pipefail
 
 MODEL_INPUT=${1:-}
 
-# Optional flags (default False)
-FP16_FLAG="--fp16 False"
-BP16_FLAG="--bp16 False"
+FP16_FLAG=""
+BP16_FLAG=""
 
-# Nếu user truyền thêm tham số fp16 hoặc bp16
 for arg in "$@"; do
   if [ "$arg" = "--fp16" ]; then
-    FP16_FLAG="--fp16 True"
+    FP16_FLAG="--fp16"
   fi
   if [ "$arg" = "--bp16" ]; then
-    BP16_FLAG="--bp16 True"
+    BP16_FLAG="--bp16"
   fi
 done
 
@@ -29,7 +27,8 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_thresho
 GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
-if [ -z "$MODEL_INPUT" ]; then
+# Nếu không có model input hoặc input đầu là flag → dùng default list
+if [ -z "$MODEL_INPUT" ] || [[ "$MODEL_INPUT" == --* ]]; then
   MODELS=(
     "roberta-base"
     "roberta-large"
