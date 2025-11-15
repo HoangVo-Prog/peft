@@ -98,6 +98,7 @@ for MODEL in "${MODELS[@]}"; do
     --train-bsz "$TRAIN_BSZ" \
     --eval-bsz "$EVAL_BSZ" \
     --no-wandb \
+    --gradient-enable \
     $FP16_FLAG \
     $BP16_FLAG
 

@@ -405,6 +405,7 @@ def main():
     p.add_argument("--learning_rate", type=float, default=2e-5)
     p.add_argument("--weight_decay", type=float, default=0.01)
     p.add_argument("--logging_steps", type=int, default=50)
+    p.add_argument("--gradient-enable", dest="gradient_enable", action="store_true")
 
     # QLoRA
     p.add_argument("--lora_r", type=int, default=16)

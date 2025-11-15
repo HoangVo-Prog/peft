@@ -57,6 +57,11 @@ def train(cfg: RunConfig) -> None:
         config.problem_type = "regression"
         
     model = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=config)
+    if cfg.gradient_enable:
+        print("Enable Gradient Checkpoint")
+        model.gradient_checkpointing_enable()
+        model.config.use_cache = False
+    
     num_params = model.num_parameters() if hasattr(model, "num_parameters") else sum(p.numel() for p in model.parameters())
 
     # Splits
@@ -257,6 +262,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--save-strategy", "--save_strategy", dest="save_strategy", type=str, default="epoch")
     p.add_argument("--eval-strategy", "--eval_strategy", dest="eval_strategy", type=str, default="epoch")
     p.add_argument("--save-total", "--save_total_limit", dest="save_total_limit", type=int, default=1)
+    p.add_argument("--gradient-enable", dest="gradient_enable", action="store_true")
+
     
     p.add_argument("--fp16", dest="fp16", action="store_true")
     p.add_argument("--bf16", dest="bf16", action="store_true")

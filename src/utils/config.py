@@ -19,6 +19,7 @@ class RunConfig:
     save_strategy: str = "epoch" # or "steps"
     eval_strategy: str = "epoch" # or "steps"
     save_total_limit: int = 1
+    gradient_enable: bool = False
     fp16: bool = True
     bf16: bool = False
     # W&B settings
