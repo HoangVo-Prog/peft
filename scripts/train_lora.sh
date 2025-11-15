@@ -29,7 +29,7 @@ done
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=32
-EVAL_BSZ=64
+EVAL_BSZ=32
 LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05
@@ -130,7 +130,6 @@ for MODEL in "${MODELS[@]}"; do
     --lora_dropout "$LORA_DROPOUT" \
     --lora_target_modules "${LORA_TARGET_MODULES[@]}" \
     --modules_to_save "${MODULES_TO_SAVE[@]}" \
-    --gradient-enable \
     $FP16_FLAG \
     $BP16_FLAG \
     --no-wandb
