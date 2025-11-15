@@ -20,7 +20,7 @@ done
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=32
-EVAL_BSZ=32
+EVAL_BSZ=64
 
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
 
