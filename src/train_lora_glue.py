@@ -322,7 +322,7 @@ def main():
         if hasattr(cfg, k):
             setattr(cfg, k, v)
         if hasattr(largs, k):
-            setattr(cfg, k, v)
+            setattr(largs, k, v)
     
     summaries = {
         "model_name": args.model_name,
