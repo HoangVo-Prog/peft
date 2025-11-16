@@ -211,8 +211,15 @@ def train(cfg: RunConfig) -> None:
         pass
     
     # Delete all checkpoints to save storage
-    for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
-        shutil.rmtree(ckpt_dir)
+    is_main_process = os.environ.get("RANK", "0") == "0"
+
+    if is_main_process:
+        for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
+            try:
+                shutil.rmtree(ckpt_dir)
+            except FileNotFoundError:
+                # Another process may have removed it already, ignore
+                pass
     
     run_summary = {
         "task": task,
