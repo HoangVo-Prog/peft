@@ -28,8 +28,8 @@ done
 # ====================================================
 EPOCHS=3
 LR=2e-5
-TRAIN_BSZ=32
-EVAL_BSZ=64
+TRAIN_BSZ=4
+EVAL_BSZ=8 
 LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05

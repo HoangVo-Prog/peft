@@ -16,15 +16,15 @@
 
 ### 2.2 LoRA
 #### 2.2.1 LoRA: q, k, v
-- [] RoBERTa-base | https://www.kaggle.com/code/nlp02aio/peft-lora | version 1
-- [] RoBERTa-large | https://www.kaggle.com/code/vohoangsfas/peft-lora | version 3 
-- [] DeBERTa-v3 |
+- [x] RoBERTa-base | https://www.kaggle.com/code/nlp02aio/peft-lora | version 1
+- [x] RoBERTa-large | https://www.kaggle.com/code/vohoangsfas/peft-lora | version 3 
+- [ ] DeBERTa-v3 | https://www.kaggle.com/code/shiroyyyyya/peft-lora
 
-#### 2.2.2 LoRA: q, k, v, d (attention)
+#### 2.2.2 LoRA: q, k, v, d (attention) 
 - [ ] RoBERTa-base | https://www.kaggle.com/code/lemmnguyen/peft-lora
 - [ ] RoBERTa-large|  https://www.kaggle.com/code/hoanggv/peft-lora
-- [!] DeBERTa-v3 | https://www.kaggle.com/code/hhhhhvvvvvv/peft-lora | ValueError: No modules were targeted for adaptation
+- [ ] DeBERTa-v3 | https://www.kaggle.com/code/nlp02aio/peft-lora 
 
 ### 2.3 QLoRA
-- To be discussed 
+
 
