@@ -288,6 +288,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     cfg = RunConfig()  
+    rank = int(os.environ.get("RANK", "0"))
 
     for k, v in vars(args).items():
         if hasattr(cfg, k):
@@ -301,14 +302,16 @@ def main() -> None:
         summaries["task"].append(train(cfg))
     else:   
         for task in GLUE_TASKS:
-            print(f"========================================= {task} =========================================")
+            if rank == 0:
+                print()
+                print(f"========================================= {task} =========================================")
+                print()
             cfg.task_name = task            
             summaries["task"].append(train(cfg))
         
     model_name = str(args.model_name).replace("/", "_")
     out_name = f"{model_name}_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
-    rank = int(os.environ.get("RANK", "0"))
     if rank == 0:
         with open(out_path, "w") as f:
             json.dump(summaries, f, indent=2)
