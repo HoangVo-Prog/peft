@@ -125,6 +125,7 @@ for MODEL in "${MODELS[@]}"; do
     --train-bsz "$TRAIN_BSZ" \
     --eval-bsz "$EVAL_BSZ" \
     --no-wandb \
+    --ddp \
     $FP16_FLAG \
     $BF16_FLAG
 
