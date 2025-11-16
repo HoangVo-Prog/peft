@@ -24,8 +24,8 @@ LR=2e-5
 # Important:
 # This is per-device batch size. On 2 GPUs, effective batch = TRAIN_BSZ * 2.
 # If you want to keep global batch ~32 like your single GPU script, use 16 here.
-TRAIN_BSZ=16
-EVAL_BSZ=64
+TRAIN_BSZ=4
+EVAL_BSZ=8
 
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
 
