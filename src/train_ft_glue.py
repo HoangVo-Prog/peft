@@ -113,6 +113,13 @@ def train(cfg: RunConfig) -> None:
         report_to=report_targets,
         run_name=run_name,
     )
+    
+    if cfg.ddp:
+        world_size = int(os.environ.get("WORLD_SIZE", "1"))
+        local_rank = int(os.environ.get("LOCAL_RANK", "-1"))
+
+        print(f"[INFO] world_size={world_size}, local_rank={local_rank}, ddp={getattr(cfg, 'ddp', False)}")
+
 
     trainer = Trainer(
         model=model,
@@ -258,6 +265,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--wd", "--weight_decay", dest="weight_decay", type=float, default=0.01)
     p.add_argument("--warmup", "--warmup_ratio", dest="warmup_ratio", type=float, default=0.06)
     p.add_argument("--seed", dest="seed", type=int, default=42)
+    p.add_argument("--ddp", dest="ddp", action="store_true",
+               help="Just a flag to indicate we expect DDP (for logging/debug)")
+
 
     p.add_argument("--save-strategy", "--save_strategy", dest="save_strategy", type=str, default="epoch")
     p.add_argument("--eval-strategy", "--eval_strategy", dest="eval_strategy", type=str, default="epoch")

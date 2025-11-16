@@ -16,6 +16,7 @@ class RunConfig:
     warmup_ratio: float = 0.06
     logging_steps: int = 100
     seed: int = 42
+    ddp: bool = False
     save_strategy: str = "epoch" # or "steps"
     eval_strategy: str = "epoch" # or "steps"
     save_total_limit: int = 1
