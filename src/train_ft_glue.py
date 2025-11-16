@@ -114,6 +114,7 @@ def train(cfg: RunConfig) -> None:
         run_name=run_name,
     )
     
+    is_main_process = os.environ.get("RANK", "0") == "0"
     if cfg.ddp:
         world_size = int(os.environ.get("WORLD_SIZE", "1"))
         local_rank = int(os.environ.get("LOCAL_RANK", "-1"))
@@ -152,7 +153,10 @@ def train(cfg: RunConfig) -> None:
 
     # Eval
     val_metrics = trainer.evaluate(eval_dataset=eval_ds)
-    print("Validation:", val_metrics)
+    if is_main_process:
+        print("Validation:", val_metrics)
+        with open(os.path.join(out_dir, f"val_metrics.json"), "w") as f:
+            json.dump(val_metrics, f, indent=2)
 
     if cfg.wandb_enable:
         try:
@@ -163,18 +167,18 @@ def train(cfg: RunConfig) -> None:
 
     if eval_mm_ds is not None:
         mm_metrics = trainer.evaluate(eval_dataset=eval_mm_ds)
-        print("Validation mismatched:", mm_metrics)
-        if cfg.wandb_enable:
-            try:
-                import wandb  # type: ignore
-                wandb.log({f"val_mm/{k}": v for k, v in mm_metrics.items()})
-            except Exception:
-                pass
+        if is_main_process:
+            print("Validation mismatched:", mm_metrics)
+            if cfg.wandb_enable:
+                try:
+                    import wandb  # type: ignore
+                    wandb.log({f"val_mm/{k}": v for k, v in mm_metrics.items()})
+                except Exception:
+                    pass
     else:
         mm_metrics = None
 
-    with open(os.path.join(out_dir, f"val_metrics.json"), "w") as f:
-        json.dump(val_metrics, f, indent=2)
+    
     if mm_metrics is not None:
         with open(os.path.join(out_dir, f"val_mm_metrics.json"), "w") as f:
             json.dump(mm_metrics, f, indent=2)
@@ -189,19 +193,6 @@ def train(cfg: RunConfig) -> None:
     if eval_mm_ds is not None:
         dump_preds(eval_mm_ds, "val_mismatched")
 
-    # Optional test set (some GLUE tasks hide test labels)
-    test_ds = None
-    if "test" in encoded:
-        test_ds = encoded["test"]
-        # Ensure no label columns exist to avoid CE on invalid targets
-        for col in ("label", "labels"):
-            if col in test_ds.column_names:
-                test_ds = test_ds.remove_columns(col)
-        try:
-            test_preds = trainer.predict(test_ds, metric_key_prefix="test").predictions
-            np.save(os.path.join(out_dir, f"test_logits.npy"), test_preds)
-        except Exception as e:
-            print("[WARN] Skipping test prediction due to:", e)
 
     try:
         if cfg.wandb_enable:
@@ -211,8 +202,6 @@ def train(cfg: RunConfig) -> None:
         pass
     
     # Delete all checkpoints to save storage
-    is_main_process = os.environ.get("RANK", "0") == "0"
-
     if is_main_process:
         for ckpt_dir in glob.glob(os.path.join(out_dir, "checkpoint-*")):
             try:
@@ -230,12 +219,10 @@ def train(cfg: RunConfig) -> None:
         "val_mm_metrics": mm_metrics,
     }
     
-    summary_path = os.path.join(
-        out_dir,
-        f"metrics_{task}_{precision}.json"
-    )
-    with open(summary_path, "w") as f:
-        json.dump(run_summary, f, indent=2)
+    summary_path = os.path.join(out_dir, f"metrics_{task}_{precision}.json")
+    if is_main_process:
+        with open(summary_path, "w") as f:
+            json.dump(run_summary, f, indent=2)
         
     del trainer
     del model
@@ -321,9 +308,11 @@ def main() -> None:
     model_name = str(args.model_name).replace("/", "_")
     out_name = f"{model_name}_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
-    with open(out_path, "w") as f:
-        json.dump(summaries, f, indent=2)
-    print(f"Saved summatries metrics to: {out_path}")
+    rank = int(os.environ.get("RANK", "0"))
+    if rank == 0:
+        with open(out_path, "w") as f:
+            json.dump(summaries, f, indent=2)
+        print(f"Saved summaries metrics to: {out_path}")
 
 if __name__ == "__main__":
     main()
