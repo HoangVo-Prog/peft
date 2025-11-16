@@ -115,7 +115,7 @@ for MODEL in "${MODELS[@]}"; do
   OUTPUT_DIR="./outputs"
   mkdir -p "$OUTPUT_DIR"
 
-  echo "===== Training LoRA on $MODEL ====="
+  echo "===== Training LoRA on $MODEL with ${LORA_TARGET_MODULES[@]}====="
 
   python -m src.train_lora_glue \
     --all \
