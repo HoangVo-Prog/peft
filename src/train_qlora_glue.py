@@ -208,9 +208,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     set_seed(qlora.seed)
 
     # Data + tokenizer
-    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(
-        cfg.task_name, cfg.model_name
-    )
+    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(cfg)
     # clamp huge model_max_length to something sane
     try:
         if tokenizer.model_max_length is None or tokenizer.model_max_length > 4096:

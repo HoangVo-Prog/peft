@@ -50,7 +50,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     task = cfg.task_name.lower()
 
     # Load data and tokenizer
-    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(cfg.task_name, cfg.model_name)
+    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(cfg)
 
     # Avoid very large tokenizer.model_max_length warning
     try:

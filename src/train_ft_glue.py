@@ -49,7 +49,7 @@ def train(cfg: RunConfig) -> None:
     task = cfg.task_name.lower()
 
     # Data
-    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(task, cfg.model_name)
+    encoded, tokenizer, collator, num_labels, _ = load_glue_and_tokenizer(cfg)
 
     # Model
     config = AutoConfig.from_pretrained(cfg.model_name, num_labels=num_labels)
