@@ -18,7 +18,7 @@
 - [x] RoBERTa-base | https://www.kaggle.com/code/nlp02aio/peft-lora | version 1
 
 #### 2.2.2 LoRA: q, k, v, d (attention) 
-- [ ] RoBERTa-base | https://www.kaggle.com/code/lemmnguyen/peft-lora
+- [x] RoBERTa-base | https://www.kaggle.com/code/lemmnguyen/peft-lora
 
 ### 2.3 QLoRA
 
