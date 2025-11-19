@@ -3,22 +3,41 @@
 # ==========================================
 # train_quantize.sh
 # Usage:
-#   bash train_quantize.sh <task_name> [model_name]
+#   bash train_quantize.sh <task_name> [model_name] [--nohup]
 #   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_quantize.sh sst2
 # ==========================================
 
 set -euo pipefail
 
 TASK=${1:-}
-MODEL_INPUT=${2:-}
 
 if [ -z "$TASK" ]; then
   echo "Vui lòng truyền tên TASK khi chạy script."
-  echo "Cách dùng: bash train_quantize.sh <task_name> [model_name]"
+  echo "Cách dùng: bash train_quantize.sh <task_name> [model_name] [--nohup]"
   echo "Ví dụ: bash train_quantize.sh sst2"
   echo "Hoặc:  bash train_quantize.sh sst2 roberta-base"
   exit 1
 fi
+
+# Xử lý MODEL_INPUT: chỉ nhận arg thứ 2 nếu không phải là flag
+MODEL_INPUT=""
+if [ $# -ge 2 ]; then
+  if [[ "$2" != --* ]]; then
+    MODEL_INPUT="$2"
+  fi
+fi
+
+USE_NOHUP=0
+
+# Parse flags (từ toàn bộ CLI args, để bắt được --nohup)
+for arg in "$@"; do
+  if [ "$arg" = "--nohup" ]; then
+    USE_NOHUP=1
+  fi
+done
+
+# Timestamp cho log tổng
+GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Hyperparams
 EPOCHS=3
@@ -36,6 +55,19 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_thresho
 # Chọn GPU
 GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
+
+BASE_OUTPUT_DIR="./outputs"
+mkdir -p "$BASE_OUTPUT_DIR"
+
+# Bọc toàn bộ script bằng nohup một lần nếu có --nohup
+if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
+  MASTER_LOG="$BASE_OUTPUT_DIR/train_qlora_${TASK}_all_${GLOBAL_TIMESTAMP}.log"
+  echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
+  export NOHUP_WRAPPED=1
+  nohup "$0" "$@" >"$MASTER_LOG" 2>&1 &
+  echo "[Info] Đã gửi script QLoRA cho task $TASK chạy background với PID $!"
+  exit 0
+fi
 
 # Danh sách model mặc định hoặc chỉ model được truyền
 if [ -z "$MODEL_INPUT" ]; then
@@ -102,22 +134,33 @@ for MODEL in "${MODELS[@]}"; do
   mkdir -p "$OUTPUT_DIR"
 
   echo "===== Training QLoRA on $MODEL for task $TASK ====="
-  python -m src.train_qlora_glue \
-    --task_name "$TASK" \
-    --model_name "$MODEL" \
-    --output_dir "$OUTPUT_DIR" \
-    --num_train_epochs "$EPOCHS" \
-    --per_device_train_batch_size "$TRAIN_BSZ" \
-    --per_device_eval_batch_size "$EVAL_BSZ" \
-    --learning_rate "$LR" \
-    --lora_r "$LORA_R" \
-    --lora_alpha "$LORA_ALPHA" \
-    --lora_dropout "$LORA_DROPOUT" \
-    --quant_type "$QUANT_TYPE" \
-    --gradient_checkpointing \
-    --no-wandb
 
+  CMD=(
+    python -m src.train_qlora_glue
+    --task_name "$TASK"
+    --model_name "$MODEL"
+    --output_dir "$OUTPUT_DIR"
+    --num_train_epochs "$EPOCHS"
+    --per_device_train_batch_size "$TRAIN_BSZ"
+    --per_device_eval_batch_size "$EVAL_BSZ"
+    --learning_rate "$LR"
+    --lora_r "$LORA_R"
+    --lora_alpha "$LORA_ALPHA"
+    --lora_dropout "$LORA_DROPOUT"
+    --quant_type "$QUANT_TYPE"
+    --gradient_checkpointing
+    --no-wandb
+  )
+
+  # Log riêng cho từng model
+  LOG_FILE="$OUTPUT_DIR/train_qlora_${TASK}_${SAFE_MODEL}_${TIMESTAMP}.log"
+  echo "[Info] Log riêng cho $MODEL: $LOG_FILE"
+
+  # Chạy và vừa log ra file, vừa in ra stdout
+  "${CMD[@]}" 2>&1 | tee "$LOG_FILE"
+
+  # Cleanup giữa hai model
   cleanup_between_models
 done
 
-echo "Tất cả model QLoRA đã chạy xong."
+echo "Tất cả model QLoRA đã train xong."

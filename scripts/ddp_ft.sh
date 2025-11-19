@@ -6,8 +6,9 @@ MODEL_INPUT=${1:-}
 
 FP16_FLAG=""
 BF16_FLAG=""
+USE_NOHUP=0
 
-# Detect precision flags from CLI
+# Detect precision flags and nohup from CLI
 for arg in "$@"; do
   if [ "$arg" = "--fp16" ]; then
     FP16_FLAG="--fp16"
@@ -15,7 +16,13 @@ for arg in "$@"; do
   if [ "$arg" = "--bf16" ]; then   # note: train_ft_glue.py expects --bf16
     BF16_FLAG="--bf16"
   fi
+  if [ "$arg" = "--nohup" ]; then
+    USE_NOHUP=1
+  fi
 done
+
+# Timestamp cho log tổng
+GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Hyperparams
 EPOCHS=3
@@ -33,8 +40,21 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_thresho
 NPROC_PER_NODE=${NPROC_PER_NODE:-2}
 MASTER_PORT=${MASTER_PORT:-29500}
 
+OUTPUT_DIR="./outputs"
+mkdir -p "$OUTPUT_DIR"
+
 # We do NOT set CUDA_VISIBLE_DEVICES here so that torchrun can see all GPUs.
 # If you want a custom set, export CUDA_VISIBLE_DEVICES before calling this script.
+
+# Bọc toàn bộ script bằng nohup một lần nếu có --nohup
+if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
+  MASTER_LOG="$OUTPUT_DIR/train_ft_ddp_all_${GLOBAL_TIMESTAMP}.log"
+  echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
+  export NOHUP_WRAPPED=1
+  nohup "$0" "$@" >"$MASTER_LOG" 2>&1 &
+  echo "[Info] Đã gửi script DDP train_ft chạy background với PID $!"
+  exit 0
+fi
 
 # If no model input or first arg is a flag, use default list
 if [ -z "$MODEL_INPUT" ] || [[ "$MODEL_INPUT" == --* ]]; then
@@ -108,27 +128,41 @@ cleanup_between_models() {
 for MODEL in "${MODELS[@]}"; do
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
   SAFE_MODEL="${MODEL//\//_}"
-  OUTPUT_DIR="./outputs"
-  mkdir -p "$OUTPUT_DIR"
 
   echo "===== Training $MODEL on $NPROC_PER_NODE GPUs ====="
 
-  torchrun \
-    --nproc_per_node="$NPROC_PER_NODE" \
-    --master_port="$MASTER_PORT" \
-    -m src.train_ft_glue \
-    --all \
-    --model "$MODEL" \
-    --output-dir "$OUTPUT_DIR" \
-    --epochs "$EPOCHS" \
-    --lr "$LR" \
-    --train-bsz "$TRAIN_BSZ" \
-    --eval-bsz "$EVAL_BSZ" \
-    --no-wandb \
-    --ddp \
-    $FP16_FLAG \
-    $BF16_FLAG
+  CMD=(
+    torchrun
+    --nproc_per_node="$NPROC_PER_NODE"
+    --master_port="$MASTER_PORT"
+    -m src.train_ft_glue
+    --all
+    --model "$MODEL"
+    --output-dir "$OUTPUT_DIR"
+    --epochs "$EPOCHS"
+    --lr "$LR"
+    --train-bsz "$TRAIN_BSZ"
+    --eval-bsz "$EVAL_BSZ"
+    --no-wandb
+    --ddp
+  )
 
+  # Append precision flags if any
+  if [ -n "$FP16_FLAG" ]; then
+    CMD+=("$FP16_FLAG")
+  fi
+  if [ -n "$BF16_FLAG" ]; then
+    CMD+=("$BF16_FLAG")
+  fi
+
+  # Log riêng cho từng model
+  LOG_FILE="$OUTPUT_DIR/train_ft_ddp_${SAFE_MODEL}_${TIMESTAMP}.log"
+  echo "[Info] Log riêng cho $MODEL: $LOG_FILE"
+
+  # Chạy DDP, vừa log file riêng, vừa in ra stdout
+  "${CMD[@]}" 2>&1 | tee "$LOG_FILE"
+
+  # Cleanup giữa hai model
   cleanup_between_models
 done
 
