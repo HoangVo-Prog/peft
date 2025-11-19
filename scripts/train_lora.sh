@@ -61,7 +61,9 @@ GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
 OUTPUT_DIR="./outputs"
+LOG_DIR = "./logs"
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$LOG_DIR"
 
 # =========================
 # Wrap toàn bộ script bằng nohup một lần
@@ -166,7 +168,7 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   # Log riêng cho từng model
-  LOG_FILE="$OUTPUT_DIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
+  LOG_FILE="$LOGDIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
   echo "[Info] Log riêng cho model $MODEL: $LOG_FILE"
 
   # Chạy model, ghi log vào file riêng, đồng thời in ra stdout

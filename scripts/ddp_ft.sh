@@ -41,7 +41,9 @@ NPROC_PER_NODE=${NPROC_PER_NODE:-2}
 MASTER_PORT=${MASTER_PORT:-29500}
 
 OUTPUT_DIR="./outputs"
+LOG_DIR = "./logs"
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$LOG_DIR"
 
 # We do NOT set CUDA_VISIBLE_DEVICES here so that torchrun can see all GPUs.
 # If you want a custom set, export CUDA_VISIBLE_DEVICES before calling this script.
@@ -156,7 +158,7 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   # Log riêng cho từng model
-  LOG_FILE="$OUTPUT_DIR/train_ft_ddp_${SAFE_MODEL}_${TIMESTAMP}.log"
+  LOG_FILE="$LOG_DIR/train_ft_ddp_${SAFE_MODEL}_${TIMESTAMP}.log"
   echo "[Info] Log riêng cho $MODEL: $LOG_FILE"
 
   # Chạy DDP, vừa log file riêng, vừa in ra stdout

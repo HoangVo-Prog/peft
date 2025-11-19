@@ -56,12 +56,14 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_thresho
 GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
-BASE_OUTPUT_DIR="./outputs"
-mkdir -p "$BASE_OUTPUT_DIR"
+OUTPUT_DIR="./outputs"
+LOG_DIR = "./logs"
+mkdir -p "$OUTPUT_DIR"
+mkdir -p "$LOG_DIR"
 
 # Bọc toàn bộ script bằng nohup một lần nếu có --nohup
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
-  MASTER_LOG="$BASE_OUTPUT_DIR/train_qlora_${TASK}_all_${GLOBAL_TIMESTAMP}.log"
+  MASTER_LOG="$OUTPUT_DIR/train_qlora_${TASK}_all_${GLOBAL_TIMESTAMP}.log"
   echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
   export NOHUP_WRAPPED=1
   nohup "$0" "$@" >"$MASTER_LOG" 2>&1 &
@@ -153,7 +155,7 @@ for MODEL in "${MODELS[@]}"; do
   )
 
   # Log riêng cho từng model
-  LOG_FILE="$OUTPUT_DIR/train_qlora_${TASK}_${SAFE_MODEL}_${TIMESTAMP}.log"
+  LOG_FILE="$LOG_DIR/train_qlora_${TASK}_${SAFE_MODEL}_${TIMESTAMP}.log"
   echo "[Info] Log riêng cho $MODEL: $LOG_FILE"
 
   # Chạy và vừa log ra file, vừa in ra stdout

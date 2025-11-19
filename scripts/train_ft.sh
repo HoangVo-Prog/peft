@@ -36,7 +36,9 @@ GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
 OUTPUT_DIR="./outputs"
+LOG_DIR = "./logs"
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$LOG_DIR"
 
 # Bọc toàn bộ script bằng nohup một lần
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
@@ -133,7 +135,7 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   # Log riêng cho từng model
-  LOG_FILE="$OUTPUT_DIR/train_ft_${SAFE_MODEL}_${TIMESTAMP}.log"
+  LOG_FILE="$LOG_DIR/train_ft_${SAFE_MODEL}_${TIMESTAMP}.log"
   echo "[Info] Log riêng cho $MODEL: $LOG_FILE"
 
   # Vừa ghi log file riêng, vừa in ra stdout
