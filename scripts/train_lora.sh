@@ -168,7 +168,7 @@ for MODEL in "${MODELS[@]}"; do
   fi
 
   # Log riêng cho từng model
-  LOG_FILE="$LOGDIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
+  LOG_FILE="$LOG_DIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
   echo "[Info] Log riêng cho model $MODEL: $LOG_FILE"
 
   # Chạy model, ghi log vào file riêng, đồng thời in ra stdout
