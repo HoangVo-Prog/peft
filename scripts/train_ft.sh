@@ -42,7 +42,7 @@ mkdir -p "$LOG_DIR"
 
 # Bọc toàn bộ script bằng nohup một lần
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
-  MASTER_LOG="$OUTPUT_DIR/train_ft_all_${GLOBAL_TIMESTAMP}.log"
+  MASTER_LOG="$LOG_DIR/train_ft_all_${GLOBAL_TIMESTAMP}.log"
   echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
   export NOHUP_WRAPPED=1
   nohup "$0" "$@" >"$MASTER_LOG" 2>&1 &
