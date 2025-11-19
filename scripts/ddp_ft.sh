@@ -41,7 +41,7 @@ NPROC_PER_NODE=${NPROC_PER_NODE:-2}
 MASTER_PORT=${MASTER_PORT:-29500}
 
 OUTPUT_DIR="./outputs"
-LOG_DIR= "./logs"
+LOG_DIR="./logs"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 

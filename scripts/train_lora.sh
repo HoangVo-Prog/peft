@@ -61,7 +61,7 @@ GPU_ID=${GPU_ID:-0}
 export CUDA_VISIBLE_DEVICES="$GPU_ID"
 
 OUTPUT_DIR="./outputs"
-LOG_DIR= "./logs"
+LOG_DIR="./logs"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 
