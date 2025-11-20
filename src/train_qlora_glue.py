@@ -155,7 +155,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         cfg.model_name,
         config=hf_cfg,
         quantization_config=bnb_cfg,
-        torch_dtype=precision,
+        torch_dtype=compute_type,
         device_map="auto",
     )
 
