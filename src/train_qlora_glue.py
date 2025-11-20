@@ -117,10 +117,13 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
 
     if cfg.fp16:
         precision = "fp16"
+        compute_type = torch.float16
     elif cfg.bf16:
         precision = "bf16"
+        compute_type = torch.bfloat16
     else:
         precision = "fp32"
+        compute_type = torch.float32
         
     task = cfg.task_name.lower()
 
@@ -144,7 +147,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         load_in_4bit=True,
         bnb_4bit_quant_type=qlora.quant_type,
         bnb_4bit_use_double_quant=qlora.double_quantize,
-        bnb_4bit_compute_dtype=precision,
+        bnb_4bit_compute_dtype=compute_type,
     )
 
     # Load in 4-bit
