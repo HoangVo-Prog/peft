@@ -426,6 +426,7 @@ def main():
             setattr(cfg, k, v)
         if hasattr(qargs, k):
             setattr(qargs, k, v)
+    print("RunConfig:", cfg)
             
     summaries = {
         "model_name": args.model_name,

@@ -38,7 +38,7 @@ class RunConfig:
     gradient_enable: bool = False
 
     # Precision
-    fp16: bool = True                      # P100 dùng fp16 là hợp
+    fp16: bool = False                      # P100 dùng fp16 là hợp
     bf16: bool = False                     # để False cho P100 cho chắc
 
     # W&B settings
