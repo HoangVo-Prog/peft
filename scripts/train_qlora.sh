@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ==========================================
-# train_quantize.sh
+# train_qlora.sh
 # Usage:
-#   bash train_quantize.sh <task_name> [model_name] [--nohup]
-#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_quantize.sh sst2
+#   bash train_qlora.sh [model_name] --bp16 [--nohup]
+#   LORA_TARGET_MODULES="query key value" bash train_qlora.sh roberta-base --bp16 
 # ==========================================
 
 set -euo pipefail
@@ -146,7 +146,6 @@ for MODEL in "${MODELS[@]}"; do
   CMD=(
     python -m src.train_qlora_glue
     --all
-    --task_name "$TASK"
     --model_name "$MODEL"
     --output_dir "$OUTPUT_DIR"
     --num_train_epochs "$EPOCHS"
