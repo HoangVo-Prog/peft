@@ -5,7 +5,7 @@ set -euo pipefail
 MODEL_INPUT=${1:-}
 
 FP16_FLAG=""
-BP16_FLAG=""
+bf16_FLAG=""
 USE_NOHUP=0
 
 # Parse flags
@@ -13,8 +13,8 @@ for arg in "$@"; do
   if [ "$arg" = "--fp16" ]; then
     FP16_FLAG="--fp16"
   fi
-  if [ "$arg" = "--bp16" ]; then
-    BP16_FLAG="--bp16"
+  if [ "$arg" = "--bf16" ]; then
+    bf16_FLAG="--bf16"
   fi
   if [ "$arg" = "--nohup" ]; then
     USE_NOHUP=1
@@ -130,8 +130,8 @@ for MODEL in "${MODELS[@]}"; do
   if [ -n "$FP16_FLAG" ]; then
     CMD+=("$FP16_FLAG")
   fi
-  if [ -n "$BP16_FLAG" ]; then
-    CMD+=("$BP16_FLAG")
+  if [ -n "$bf16_FLAG" ]; then
+    CMD+=("$bf16_FLAG")
   fi
 
   # Log riêng cho từng model

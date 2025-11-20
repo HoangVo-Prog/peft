@@ -10,7 +10,7 @@
 ### 2.1 Full finetuning
 - [x] RoBERTa-base fp32 | https://www.kaggle.com/code/vohoangg/peft-fft | P100 | version 1 
 - [x] RoBERTa-base fp16 | https://www.kaggle.com/code/hoanggvo/fork-of-ft-peft | P100 | version 10
-- [x] RoBERTa-base bp16 | https://www.kaggle.com/code/hoanggvo/fork-of-ft-peft | P100 | version 12 
+- [x] RoBERTa-base bf16 | https://www.kaggle.com/code/hoanggvo/fork-of-ft-peft | P100 | version 12 
 - [x] RoBERTa-base fp16 | https://www.kaggle.com/code/hoanggvo/fork-of-ft-peft | T4   | version 14
 
 ### 2.2 LoRA
