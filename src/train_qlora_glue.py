@@ -176,7 +176,6 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     base = prepare_model_for_kbit_training(
         base,
         use_gradient_checkpointing=cfg.gradient_enable,
-        output_embedding_layer_name=qlora.output_embedding_layer_name,
     )
     
     # LoRA config
