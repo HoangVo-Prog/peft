@@ -65,7 +65,8 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         hf_cfg.problem_type = "regression"
 
     base = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=hf_cfg)
-    if lora.gradient_enable:
+    
+    if cfg.gradient_enable:
         base.gradient_checkpointing_enable()
         
     print(lora.target_modules)
