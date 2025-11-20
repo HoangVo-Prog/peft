@@ -4,7 +4,7 @@
 # train_qlora.sh
 # Usage:
 #   bash train_qlora.sh [model_name] --bp16 [--nohup]
-#   LORA_TARGET_MODULES="query key value" bash train_qlora.sh roberta-base --bp16 
+#   LORA_TARGET_MODULES="query key value" bash train_qlora.sh roberta-base --bf16 
 # ==========================================
 
 set -euo pipefail

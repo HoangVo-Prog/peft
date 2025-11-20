@@ -135,7 +135,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         pass
 
     # HF config
-    hf_cfg = AutoConfig.from_pretrained(cfg.model_name, config=hf_cfg)
+    hf_cfg = AutoConfig.from_pretrained(cfg.model_name, num_labels=num_labels)
     if is_regression_task(cfg.task_name):
         hf_cfg.problem_type = "regression"
 
