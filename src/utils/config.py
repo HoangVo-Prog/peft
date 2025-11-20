@@ -56,20 +56,37 @@ class LoRAArgs:
     dropout: float = 0.1
     bias: str = "none"  # "none", "all", hoặc "lora_only"
 
-    # Cho roberta = attention projection
     target_modules: List[str] = field(
         default_factory=lambda: ["query", "key", "value"]
     )
 
-    # Thường cần lưu classifier để head vẫn finetune
     modules_to_save: List[str] = field(
         default_factory=lambda: ["classifier"]
     )
 
     seed: int = 42
 
-    # Với roberta large trên GLUE nên bật gradient checkpointing
-    gradient_checkpointing: bool = True
+
+@dataclass
+class QLoRAArgs:
+    r: int = 8
+    alpha: int = 16
+    dropout: float = 0.1
+    bias: str = "none"
+    
+    target_modules: List[str] = field(
+        default_factory=lambda: ["query", "key", "value"]
+    )
+    
+    modules_to_save: List[str] = field(
+        default_factory=lambda: ["classifier"]
+    )
+    output_embedding_layer_name: str = "classifier" 
+        
+    seed: int = 42
+    double_quantize: bool = True
+    quant_type: str = "nf4"  # "nf4" / "fp4" /"int4"
+
 
 
 GLUE_SENTENCE_KEYS: Dict[str, Tuple[Optional[str], Optional[str]]] = {

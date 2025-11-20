@@ -58,7 +58,6 @@ def train(cfg: RunConfig) -> None:
         
     model = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=config)
     if cfg.gradient_enable:
-        print("Enable Gradient Checkpoint")
         model.gradient_checkpointing_enable()
         model.config.use_cache = False
     

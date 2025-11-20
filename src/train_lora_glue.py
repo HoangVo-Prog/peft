@@ -65,7 +65,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         hf_cfg.problem_type = "regression"
 
     base = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=hf_cfg)
-    if lora.gradient_checkpointing:
+    if lora.gradient_enable:
         base.gradient_checkpointing_enable()
         
     print(lora.target_modules)
@@ -299,7 +299,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora_bias", type=str, default="none")
     p.add_argument("--lora_target_modules", dest="target_modules", type=str, nargs="+", default=["key", "query", "value"], help="List of target modules for LoRA") 
     p.add_argument("--modules_to_save", type=str, nargs="+", default=["classifier"], help="Modules training no LoRA") 
-    p.add_argument("--gradient_checkpointing", action="store_true")
 
     # W&B
     p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")   

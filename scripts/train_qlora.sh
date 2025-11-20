@@ -9,37 +9,35 @@
 
 set -euo pipefail
 
-TASK=${1:-}
+MODEL_INPUT=${1:-}
 
-if [ -z "$TASK" ]; then
-  echo "Vui lòng truyền tên TASK khi chạy script."
-  echo "Cách dùng: bash train_quantize.sh <task_name> [model_name] [--nohup]"
-  echo "Ví dụ: bash train_quantize.sh sst2"
-  echo "Hoặc:  bash train_quantize.sh sst2 roberta-base"
-  exit 1
-fi
-
-# Xử lý MODEL_INPUT: chỉ nhận arg thứ 2 nếu không phải là flag
-MODEL_INPUT=""
-if [ $# -ge 2 ]; then
-  if [[ "$2" != --* ]]; then
-    MODEL_INPUT="$2"
-  fi
-fi
-
+FP16_FLAG=""
+BP16_FLAG=""
 USE_NOHUP=0
+QUANT_TYPE="nf4"
 
-# Parse flags (từ toàn bộ CLI args, để bắt được --nohup)
+# Parse flags
 for arg in "$@"; do
+  if [ "$arg" = "--fp16" ]; then
+    FP16_FLAG="--fp16"
+  fi
+  if [ "$arg" = "--bp16" ]; then
+    BP16_FLAG="--bp16"
+  fi
   if [ "$arg" = "--nohup" ]; then
     USE_NOHUP=1
   fi
+  if [[ "$arg" == --quant_type=* ]]; then
+    QUANT_TYPE="${arg#--quant_type=}"
+  fi
 done
 
-# Timestamp cho log tổng
+# Timestamp để dùng cho log tổng khi wrap nohup
 GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
+# ====================================================
 # Hyperparams
+# ====================================================
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=4
@@ -47,9 +45,20 @@ EVAL_BSZ=8
 LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05
-QUANT_TYPE=${QUANT_TYPE:-nf4}   # nf4 hoặc fp4
 
-# Giảm phân mảnh bộ nhớ giữa các runs
+# target modules
+if [ -z "${LORA_TARGET_MODULES:-}" ]; then
+  LORA_TARGET_MODULES=("query" "key" "value")
+else
+  read -r -a LORA_TARGET_MODULES <<< "$LORA_TARGET_MODULES"
+fi
+
+if [ -z "${MODULES_TO_SAVE:-}" ]; then
+  MODULES_TO_SAVE=("classifier")
+else
+  read -r -a MODULES_TO_SAVE <<< "$MODULES_TO_SAVE"
+fi
+
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,garbage_collection_threshold:0.6,expandable_segments:False"
 
 # Chọn GPU
@@ -71,8 +80,8 @@ if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
   exit 0
 fi
 
-# Danh sách model mặc định hoặc chỉ model được truyền
-if [ -z "$MODEL_INPUT" ]; then
+# Nếu arg đầu tiên là flag hoặc không có gì → dùng default model list
+if [ -z "$MODEL_INPUT" ] || [[ "$MODEL_INPUT" == --* ]]; then
   MODELS=(
     "roberta-base"
     "roberta-large"
@@ -127,18 +136,16 @@ cleanup_between_models() {
   echo "[Cleanup] Hoàn tất."
 }
 
-# ---------- Vòng lặp train QLoRA ----------
+# ---------- Train loop ----------
 
 for MODEL in "${MODELS[@]}"; do
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-  SAFE_MODEL="${MODEL//\//_}"
-  OUTPUT_DIR="./outputs/qlora-${TASK}-${SAFE_MODEL}-${TIMESTAMP}"
-  mkdir -p "$OUTPUT_DIR"
 
-  echo "===== Training QLoRA on $MODEL for task $TASK ====="
+  echo "===== Training QLoRA on $MODEL ====="
 
   CMD=(
     python -m src.train_qlora_glue
+    --all
     --task_name "$TASK"
     --model_name "$MODEL"
     --output_dir "$OUTPUT_DIR"
@@ -150,9 +157,16 @@ for MODEL in "${MODELS[@]}"; do
     --lora_alpha "$LORA_ALPHA"
     --lora_dropout "$LORA_DROPOUT"
     --quant_type "$QUANT_TYPE"
-    --gradient_checkpointing
     --no-wandb
   )
+
+  # Thêm flag fp16 / bp16 nếu có
+  if [ -n "$FP16_FLAG" ]; then
+    CMD+=("$FP16_FLAG")
+  fi
+  if [ -n "$BP16_FLAG" ]; then
+    CMD+=("$BP16_FLAG")
+  fi
 
   # Log riêng cho từng model
   LOG_FILE="$LOG_DIR/train_qlora_${TASK}_${SAFE_MODEL}_${TIMESTAMP}.log"
