@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# ==========================================
-# train_qlora.sh
-# Usage:
-#   bash train_qlora.sh [model_name] --bf16 [--nohup]
-#   LORA_TARGET_MODULES="query key value" bash train_qlora.sh roberta-base --bf16 
-# ==========================================
+#----------------------------------------------------------------------------------------
+# bash scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
+# tasks:
+#   run 1:
+#   run 2:
+#   run 3:
+#----------------------------------------------------------------------------------------
 
 set -euo pipefail
 
@@ -15,29 +16,39 @@ FP16_FLAG=""
 bf16_FLAG=""
 USE_NOHUP=0
 QUANT_TYPE="nf4"
+TASKS_ARG=""
+EXPECT_TASKS_ARG=0
 
 # Parse flags
 for arg in "$@"; do
+  # Nếu đang chờ value cho --tasks
+  if [ "$EXPECT_TASKS_ARG" -eq 1 ]; then
+    TASKS_ARG="$arg"
+    EXPECT_TASKS_ARG=0
+    continue
+  fi
+
   if [ "$arg" = "--fp16" ]; then
     FP16_FLAG="--fp16"
   fi
-  if [ "$arg" = "--bf16" ]; then
+  elif [ "$arg" = "--bf16" ]; then
     bf16_FLAG="--bf16"
   fi
-  if [ "$arg" = "--nohup" ]; then
+  elif [ "$arg" = "--nohup" ]; then
     USE_NOHUP=1
   fi
-  if [[ "$arg" == --quant_type=* ]]; then
+  elif [[ "$arg" == --quant_type=* ]]; then
     QUANT_TYPE="${arg#--quant_type=}"
+  fi
+  elif [ "$arg" = "--tasks" ]; then
+    EXPECT_TASKS_ARG=1
   fi
 done
 
 # Timestamp để dùng cho log tổng khi wrap nohup
 GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# ====================================================
 # Hyperparams
-# ====================================================
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=4
@@ -70,7 +81,7 @@ LOG_DIR="./logs"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 
-# Bọc toàn bộ script bằng nohup một lần nếu có --nohup
+# Nohup
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
   MASTER_LOG="$LOG_DIR/train_qlora_${TASK}_all_${GLOBAL_TIMESTAMP}.log"
   echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
@@ -140,8 +151,9 @@ cleanup_between_models() {
 
 for MODEL in "${MODELS[@]}"; do
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+  SAFE_MODEL="${MODEL//\//_}"
 
-  echo "===== Training QLoRA on $MODEL ====="
+  echo "===== Training QLoRA $MODEL với target ${LORA_TARGET_MODULES[*]} ====="
 
   CMD=(
     python -m src.train_qlora_glue
@@ -158,6 +170,13 @@ for MODEL in "${MODELS[@]}"; do
     --quant_type "$QUANT_TYPE"
     --no-wandb
   )
+
+  # Nếu có TASKS_ARG thì dùng --tasks, không thì dùng --all
+  if [ -n "$TASKS_ARG" ]; then
+    CMD+=(--tasks "$TASKS_ARG")
+  else
+    CMD+=(--all)
+  fi
 
   # Thêm flag fp16 / bf16 nếu có
   if [ -n "$FP16_FLAG" ]; then

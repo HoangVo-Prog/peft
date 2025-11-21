@@ -1,10 +1,11 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------------
-# bash scripts/train_ft.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "TASK1 TASK2 ..."]
+# bash scripts/train_ft.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
 # tasks:
-# - run 1: "cola sst2 mrpc qqp stsb"
-# - run 2: "mnli qnli rte wnli"
+#   run 1: "cola sst2 mrpc qqp stsb"
+#   run 2: "mnli qnli rte wnli"
+#   run 3: 
 #----------------------------------------------------------------------------------------
 
 set -euo pipefail
@@ -56,7 +57,7 @@ LOG_DIR="./logs"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 
-# Bọc toàn bộ script bằng nohup một lần
+# Nohup
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
   MASTER_LOG="$LOG_DIR/train_ft_all_${GLOBAL_TIMESTAMP}.log"
   echo "[Info] Re exec script duoi nohup, log tong: $MASTER_LOG"

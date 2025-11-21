@@ -1,83 +1,47 @@
 #!/bin/bash
 
-# ==========================================
-# train_lora.sh
-# Usage:
-#   bash train_lora.sh [model_name]  --nohup --all
-#   ALLOW_GPU_RESET=1 GPU_ID=0 bash train_lora.sh [model_name] --tasks "cola sst2 mrpc"
-#   bash train_lora.sh "roberta-base" --tasks "sst2 mrpc"
-# ==========================================
+#----------------------------------------------------------------------------------------
+# bash scripts/train_lora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]"
+# tasks:
+#   run 1: 
+#   run 2:
+#   run 3:
+#----------------------------------------------------------------------------------------
 
 set -euo pipefail
 
-# Lưu lại toàn bộ args gốc để dùng cho nohup
-ORIG_ARGS=("$@")
+MODEL_INPUT=${1:-}
 
-MODEL_INPUT=""
 FP16_FLAG=""
 bf16_FLAG=""
 USE_NOHUP=0
+TASKS_ARG=""
+EXPECT_TASKS_ARG=0
 
-# Task control
-USE_ALL_TASKS=1         # mặc định: dùng --all
-TASKS_STR=""
-TASKS=()
+# Parse flags
+for arg in "$@"; do
+  # Nếu đang chờ value cho --tasks
+  if [ "$EXPECT_TASKS_ARG" -eq 1 ]; then
+    TASKS_ARG="$arg"
+    EXPECT_TASKS_ARG=0
+    continue
+  fi
 
-# Parse args
-POSITIONAL=()
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --fp16)
-      FP16_FLAG="--fp16"
-      shift
-      ;;
-    --bf16)
-      bf16_FLAG="--bf16"
-      shift
-      ;;
-    --nohup)
-      USE_NOHUP=1
-      shift
-      ;;
-    --tasks)
-      if [[ $# -lt 2 ]]; then
-        echo "[Error] --tasks cần một chuỗi task, ví dụ: --tasks \"cola sst2 mrpc\"" >&2
-        exit 1
-      fi
-      USE_ALL_TASKS=0
-      TASKS_STR="$2"
-      shift 2
-      ;;
-    --all)
-      USE_ALL_TASKS=1
-      TASKS_STR=""
-      shift
-      ;;
-    *)
-      POSITIONAL+=("$1")
-      shift
-      ;;
-  esac
+  if [ "$arg" = "--fp16" ]; then
+    FP16_FLAG="--fp16"
+  elif [ "$arg" = "--bf16" ]; then
+    bf16_FLAG="--bf16"
+  elif [ "$arg" = "--nohup" ]; then
+    USE_NOHUP=1
+  elif [ "$arg" = "--tasks" ]; then
+    EXPECT_TASKS_ARG=1
+  fi
 done
 
-# Lấy model đầu tiên trong phần positional nếu có
-if [ "${#POSITIONAL[@]}" -gt 0 ]; then
-  MODEL_INPUT="${POSITIONAL[0]}"
-fi
-
-# Nếu dùng --tasks thì tách chuỗi thành mảng
-if [ "$USE_ALL_TASKS" -eq 0 ]; then
-  # TASKS_STR là chuỗi với task cách nhau bởi khoảng trắng
-  # ví dụ: "cola sst2 mrpc"
-  read -r -a TASKS <<< "$TASKS_STR"
-fi
-
-# Timestamp để dùng cho log tổng khi wrap nohup
+# Timestamp cho log tổng
 GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# ====================================================
 # Hyperparams
-# ====================================================
 EPOCHS=3
 LR=2e-5
 TRAIN_BSZ=4
@@ -109,9 +73,7 @@ LOG_DIR="./logs"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 
-# =========================
-# Wrap toàn bộ script bằng nohup một lần
-# =========================
+# Nohup
 if [ "$USE_NOHUP" -eq 1 ] && [ "${NOHUP_WRAPPED:-0}" -ne 1 ]; then
   MASTER_LOG="$LOG_DIR/train_lora_all_${GLOBAL_TIMESTAMP}.log"
   echo "[Info] Re exec script dưới nohup, log tổng: $MASTER_LOG"
@@ -181,10 +143,12 @@ cleanup_between_models() {
 # ---------- Train Loop ----------
 
 for MODEL in "${MODELS[@]}"; do
-  echo "===== Training LoRA trên $MODEL với target ${LORA_TARGET_MODULES[*]} ====="
+  TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+  SAFE_MODEL="${MODEL//\//_}"
 
-  # Base command chung cho mọi task
-  BASE_CMD=(
+  echo "===== Training LoRA $MODEL với target ${LORA_TARGET_MODULES[*]} ====="
+
+  CMD=(
     python -m src.train_lora_glue
     --model_name "$MODEL"
     --output_dir "$OUTPUT_DIR"
@@ -200,6 +164,13 @@ for MODEL in "${MODELS[@]}"; do
     --no-wandb
   )
 
+  # Nếu có TASKS_ARG thì dùng --tasks, không thì dùng --all
+  if [ -n "$TASKS_ARG" ]; then
+    CMD+=(--tasks "$TASKS_ARG")
+  else
+    CMD+=(--all)
+  fi
+
   # Thêm flag fp16 / bf16 nếu có
   if [ -n "$FP16_FLAG" ]; then
     BASE_CMD+=("$FP16_FLAG")
@@ -208,26 +179,14 @@ for MODEL in "${MODELS[@]}"; do
     BASE_CMD+=("$bf16_FLAG")
   fi
 
-  if [ "$USE_ALL_TASKS" -eq 1 ]; then
-    # Chạy một lần với --all
-    RUN_TS=$(date +"%Y%m%d_%H%M%S")
-    CMD=("${BASE_CMD[@]}" --all)
-    LOG_FILE="$LOG_DIR/train_lora_${MODEL//\//_}_all_${RUN_TS}.log"
-    echo "[Info] Log cho model $MODEL (all tasks): $LOG_FILE"
-    "${CMD[@]}" 2>&1 | tee "$LOG_FILE"
-  else
-    # Loop qua từng task, thêm --task <task>
-    for TASK in "${TASKS[@]}"; do
-      RUN_TS=$(date +"%Y%m%d_%H%M%S")
-      CMD=("${BASE_CMD[@]}" --task "$TASK")
-      LOG_FILE="$LOG_DIR/train_lora_${MODEL//\//_}_${TASK}_${RUN_TS}.log"
-      echo "[Info] Log cho model $MODEL task $TASK: $LOG_FILE"
-      "${CMD[@]}" 2>&1 | tee "$LOG_FILE"
-    done
-  fi
+  # Log riêng cho từng model
+  LOG_FILE="$LOG_DIR/train_lora_${SAFE_MODEL}_${TIMESTAMP}.log"
+
+  # Vừa ghi log file riêng, vừa in ra stdout
+  "${CMD[@]}" 2>&1 | tee "$LOG_FILE"
 
   # Dọn GPU giữa hai model
   cleanup_between_models
 done
 
-echo "Tất cả model LoRA đã train xong."
+echo "Completed"

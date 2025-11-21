@@ -302,8 +302,10 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
+    
+    # Run config 
     cfg = RunConfig()  
     rank = int(os.environ.get("RANK", "0"))
 
@@ -316,10 +318,14 @@ def main() -> None:
         "task": [],
     }
     
+    model_name = str(args.model_name).replace("/", "_")
     if not cfg.all:
         tasks = [t.strip() for t in args.task_names.split(" ")]
+        out_name = f"{model_name}_ft_" + "_".join(tasks) + ".json"
     else:
         tasks = GLUE_TASKS
+        out_name = f"{model_name}_ft_all_tasks.json"
+
     
     for task in tasks:
             if rank == 0:
@@ -330,8 +336,6 @@ def main() -> None:
             summaries["task"].append(train(cfg))   
         
         
-    model_name = str(args.model_name).replace("/", "_")
-    out_name = f"{model_name}_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
     if rank == 0:
         with open(out_path, "w") as f:

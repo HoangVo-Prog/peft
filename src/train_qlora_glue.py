@@ -379,7 +379,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="GLUE QLoRA finetune")
     p.add_argument("--all", "--all_task", dest="all", action="store_true", help="Run all GLUE tasks defined in GLUE_TASKS")    
-    p.add_argument("--task_name", type=str, default="sst2")
+    p.add_argument("--tasks", "--task_names", dest="task_names", type=str, default="sst2")
     p.add_argument("--model_name", type=str, default="bert-base-uncased")
     p.add_argument("--output_dir", type=str, default="./outputs/qlora")
     p.add_argument("--num_train_epochs", type=float, default=3.0)
@@ -418,6 +418,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    
     # Run config
     cfg = RunConfig()
     # QLoRA config
@@ -428,24 +429,29 @@ def main():
             setattr(cfg, k, v)
         if hasattr(qargs, k):
             setattr(qargs, k, v)
-    print("RunConfig:", cfg)
             
     summaries = {
         "model_name": args.model_name,
         "task": []
     }
-    
+
+    model_name = str(args.model_name).replace("/", "_")    
     if not args.all:
-        summaries["task"].append(train(cfg, qargs))
+        tasks = [t.strip() for t in args.task_names.split(" ")]
+        out_name = f"{model_name}_qlora_" + "_".join(tasks) + ".json"
     else:
-        for task in GLUE_TASKS:
-            print(f"========================================= {task} =========================================")
-            cfg.task_name = task
-            summaries["task"].append(train(cfg, qargs))
+        tasks = GLUE_TASKS
+        out_name = f"{model_name}_qlora_all_tasks.json"
 
     
-    model_name = str(args.model_name).replace("/", "_")
-    out_name = f"{model_name}_all_tasks.json"
+    for task in tasks:
+        print()
+        print(f"========================================= {task} =========================================")
+        print()
+        cfg.task_name = task
+        summaries["task"].append(train(cfg, qargs))
+
+    
     out_path = os.path.join(args.output_dir, out_name)
     with open(out_path, "w") as f:
         json.dump(summaries, f, indent=2)

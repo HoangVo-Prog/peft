@@ -274,7 +274,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="GLUE LoRA finetune")
     p.add_argument("--all", "--all_task", dest="all", action="store_true", help="Run all GLUE tasks defined in GLUE_TASKS")
-    p.add_argument("--task", "--task_name", dest="task_name", type=str, default="sst2")
+    p.add_argument("--tasks", "--task_names", dest="task_names", type=str, default="sst2")
     p.add_argument("--model_name", type=str, default="bert-base-uncased")
     p.add_argument("--output_dir", type=str, default="./outputs/lora")
     p.add_argument("--num_train_epochs", type=float, default=3.0)
@@ -329,17 +329,22 @@ def main():
         "task": []
     }
     
-    if not args.all:
-        summaries["task"].append(train(cfg, largs))
+    model_name = str(args.model_name).replace("/", "_")    
+    if not cfg.all:
+        tasks = [t.strip() for t in args.task_names.split(" ")]
+        out_name = f"{model_name}_lora_" + "_".join(tasks) + ".json"
     else:
-        for task in GLUE_TASKS:
-            print(f"========================================= {task} =========================================")
-            cfg.task_name = task
-            summaries["task"].append(train(cfg, largs))
+        tasks = GLUE_TASKS
+        out_name = f"{model_name}_lora_all_tasks.json"
+        
+    for task in tasks:
+        print()
+        print(f"========================================= {task} =========================================")
+        print()
+        cfg.task_name = task
+        summaries["task"].append(train(cfg, largs))
 
     
-    model_name = str(args.model_name).replace("/", "_")
-    out_name = f"{model_name}_all_tasks.json"
     out_path = os.path.join(args.output_dir, out_name)
     with open(out_path, "w") as f:
         json.dump(summaries, f, indent=2)
