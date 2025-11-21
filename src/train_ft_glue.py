@@ -317,7 +317,7 @@ def main() -> None:
     }
     
     if not cfg.all:
-        tasks = [t.strip() for t in args.task_names.split(",")]
+        tasks = [t.strip() for t in args.task_names.split(" ")]
     else:
         tasks = GLUE_TASKS
     
