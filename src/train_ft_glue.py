@@ -130,11 +130,24 @@ def train(cfg: RunConfig) -> None:
         data_collator=collator,
         compute_metrics=compute_metrics,
     )
+    
+    # Reset thống kê VRAM trước khi train
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        base_mem = torch.cuda.memory_allocated() / 1024**2  # MB
 
     # Train
     start_time = time.perf_counter()
     trainer.train()
     train_time = time.perf_counter() - start_time
+    
+    # Đọc peak VRAM sau khi train
+    max_mem = None
+    if torch.cuda.is_available():
+        max_mem = torch.cuda.max_memory_allocated() / 1024**2  # MB
+        if is_main_process:
+            print(f"[VRAM] base_mem={base_mem:.2f} MB, peak_train_mem={max_mem:.2f} MB")
 
     # Final marker for W&B
     try:
@@ -218,6 +231,10 @@ def train(cfg: RunConfig) -> None:
         "val_mm_metrics": mm_metrics,
     }
     
+    if max_mem is not None:
+        run_summary["vram_base_mb"] = float(base_mem)
+        run_summary["vram_peak_mb"] = float(max_mem)
+    
     summary_path = os.path.join(out_dir, f"metrics_{task}_{precision}.json")
     if is_main_process:
         with open(summary_path, "w") as f:
@@ -243,12 +260,13 @@ def train(cfg: RunConfig) -> None:
         
     return run_summary
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Unified GLUE fine-tuning (HF Trainer)")
 
     # Primary names
     p.add_argument("--all", "--all_task", dest="all", action="store_true", help="Run all GLUE tasks defined in GLUE_TASKS")
-    p.add_argument("--task", "--task_name", dest="task_name", type=str, default="sst2")
+    p.add_argument("--tasks", "--task_names", dest="task_names", type=str, default="sst2")
     p.add_argument("--model", "--model_name", dest="model_name", type=str, default="bert-base-uncased")
     p.add_argument("--output-dir", "--output_dir", dest="output_dir", type=str, default="./outputs")
     p.add_argument("--epochs", "--num_train_epochs", dest="num_train_epochs", type=float, default=3.0)
@@ -297,16 +315,20 @@ def main() -> None:
         "model_name": args.model_name,
         "task": [],
     }
+    
     if not cfg.all:
-        summaries["task"].append(train(cfg))
-    else:   
-        for task in GLUE_TASKS:
+        tasks = [t.strip() for t in args.task_names.split(",")]
+    else:
+        tasks = GLUE_TASKS
+    
+    for task in tasks:
             if rank == 0:
                 print()
                 print(f"========================================= {task} =========================================")
                 print()
-            cfg.task_name = task            
-            summaries["task"].append(train(cfg))
+            cfg.task_name = task
+            summaries["task"].append(train(cfg))   
+        
         
     model_name = str(args.model_name).replace("/", "_")
     out_name = f"{model_name}_all_tasks.json"
