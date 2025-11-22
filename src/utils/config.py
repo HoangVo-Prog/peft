@@ -59,6 +59,8 @@ class LoRAArgs:
     target_modules: List[str] = field(
         default_factory=lambda: ["query", "key", "value"]
     )
+    
+    lora_all_layers: bool = False
 
     modules_to_save: List[str] = field(
         default_factory=lambda: ["classifier"]
@@ -77,6 +79,8 @@ class QLoRAArgs:
     target_modules: List[str] = field(
         default_factory=lambda: ["query", "key", "value"]
     )
+    
+    lora_all_layers: bool = False
     
     modules_to_save: List[str] = field(
         default_factory=lambda: ["classifier"]

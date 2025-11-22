@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------------
-# bash scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
+# bash LORA_TARGET_MODULES="query key value" scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
 # tasks:
 #   run 1: "cola sst2 mrpc qqp stsb"
 #   run 2: "mnli qnli rte wnli"
@@ -17,6 +17,8 @@ USE_NOHUP=0
 QUANT_TYPE="nf4"
 TASKS_ARG=""
 EXPECT_TASKS_ARG=0
+LORA_ALL_LAYERS=""
+
 
 # Parse flags
 for arg in "$@"; do
@@ -58,7 +60,8 @@ LORA_DROPOUT=0.05
 
 # target modules
 if [ -z "${LORA_TARGET_MODULES:-}" ]; then
-  LORA_TARGET_MODULES=("query" "key" "value")
+  LORA_TARGET_MODULES=("")
+  LORA_ALL_LAYERS="--lora_all_layers"
 else
   read -r -a LORA_TARGET_MODULES <<< "$LORA_TARGET_MODULES"
 fi
@@ -175,6 +178,11 @@ for MODEL in "${MODELS[@]}"; do
     CMD+=(--tasks "$TASKS_ARG")
   else
     CMD+=(--all)
+  fi
+  
+  # Nếu không truyền --target_modules thì tự động train all layers
+  if [ -n "$LORA_ALL_LAYERS" ]; then
+    CMD+=("$LORA_ALL_LAYERS")
   fi
 
   # Thêm flag fp16 / bf16 nếu có

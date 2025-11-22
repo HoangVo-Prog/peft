@@ -34,6 +34,15 @@ from src.utils.config import RunConfig, is_regression_task, GLUE_TASKS, QLoRAArg
 from src.utils.wandb_utils import setup_wandb  
 
 
+def select_modules_for_all_layers(model: nn.Module) -> list[str]:
+    target_modules = set()
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Linear):
+            split_name = name.split(".")
+            target_modules.add(split_name[-1])
+    return list(target_modules)
+
+
 def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
@@ -177,6 +186,11 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         base,
         use_gradient_checkpointing=cfg.gradient_enable,
     )
+    
+    if qlora.lora_all_layers:
+        print("Applying LoRA to all linear layers")
+        qlora.target_modules = select_modules_for_all_layers(base)
+        print("Target modules:", qlora.target_modules)
     
     # LoRA config
     lcfg = LoraConfig(
@@ -423,6 +437,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora_dropout", type=float, default=0.05)
     p.add_argument("--lora_bias", type=str, default="none")
     p.add_argument("--lora_target_modules", type=str, default="")  # comma-separated; empty => auto
+    p.add_argument("--lora_all_layers", dest="lora_all_layers", action="store_true", help="Apply LoRA to all linear layers")
+
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--quant_type", type=str, default="nf4")
     p.add_argument("--double-quantize", type=bool, default=True)

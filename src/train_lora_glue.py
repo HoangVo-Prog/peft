@@ -28,6 +28,15 @@ from src.utils.config import RunConfig, LoRAArgs, is_regression_task, GLUE_TASKS
 from src.utils.wandb_utils import setup_wandb  # type: ignore
 
 
+def select_modules_for_all_layers(model: nn.Module) -> list[str]:
+    target_modules = set()
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Linear):
+            split_name = name.split(".")
+            target_modules.add(split_name[-1])
+    return list(target_modules)
+
+
 def _timestamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
@@ -69,7 +78,11 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     if cfg.gradient_enable:
         base.gradient_checkpointing_enable()
         
-    print(lora.target_modules)
+    if lora.lora_all_layers:
+        print("Applying LoRA to all linear layers")
+        lora.target_modules = select_modules_for_all_layers(base)
+        print("Target modules:", lora.target_modules)
+    
 
     lcfg = LoraConfig(
         r=lora.r,
@@ -319,6 +332,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora_bias", type=str, default="none")
     p.add_argument("--lora_target_modules", dest="target_modules", type=str, nargs="+", default=["key", "query", "value"], help="List of target modules for LoRA") 
     p.add_argument("--modules_to_save", type=str, nargs="+", default=["classifier"], help="Modules training no LoRA") 
+    p.add_argument("--lora_all_layers", dest="lora_all_layers", action="store_true", help="Apply LoRA to all linear layers")
 
     # W&B
     p.add_argument("--no-wandb", dest="wandb_enable", action="store_false")   
