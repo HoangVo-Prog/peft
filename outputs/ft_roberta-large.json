@@ -1,0 +1,58 @@
+{
+  "model_name": "roberta-base",
+  "task": [
+    {
+    "task": "cola",
+    "precision": "fp32",
+    "num_parameters": 355361794,
+    "train_time_sec": 796.4915807240002,
+    "val_metrics": {
+        "eval_loss": 0.6814450621604919,
+        "eval_matthews_correlation": 0.5416549448511832,
+        "eval_runtime": 3.5295,
+        "eval_samples_per_second": 295.51,
+        "eval_steps_per_second": 37.116,
+        "epoch": 3.0
+    },
+    "val_mm_metrics": null,
+    "vram_base_mb": 1357.25927734375,
+    "vram_peak_mb": 6814.01953125
+    },
+    {
+    "task": "sst2",
+    "precision": "fp32",
+    "num_parameters": 355361794,
+    "train_time_sec": 6457.450316562999,
+    "val_metrics": {
+        "eval_loss": 0.386454313993454,
+        "eval_accuracy": 0.9231651376146789,
+        "eval_runtime": 4.7315,
+        "eval_samples_per_second": 184.297,
+        "eval_steps_per_second": 23.037,
+        "epoch": 3.0
+    },
+    "val_mm_metrics": null,
+    "vram_base_mb": 1373.69677734375,
+    "vram_peak_mb": 6815.81640625
+    },
+    {
+    "task": "mrpc",
+    "precision": "fp32",
+    "num_parameters": 355361794,
+    "train_time_sec": 528.4054504399992,
+    "val_metrics": {
+        "eval_loss": 0.6241411566734314,
+        "eval_accuracy": 0.6838235294117647,
+        "eval_f1": 0.8122270742358079,
+        "eval_combined_score": 0.7480253018237863,
+        "eval_runtime": 3.6502,
+        "eval_samples_per_second": 111.774,
+        "eval_steps_per_second": 13.972,
+        "epoch": 3.0
+    },
+    "val_mm_metrics": null,
+    "vram_base_mb": 1373.69677734375,
+    "vram_peak_mb": 6814.59375
+    }
+  ]
+}
