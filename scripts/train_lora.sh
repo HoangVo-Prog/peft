@@ -1,11 +1,10 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------------
-# bash scripts/train_lora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]"
+# !LORA_TARGET_MODULES="query key value" bash scripts/train_lora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]"
 # tasks:
 #   run 1: 
 #   run 2:
-#   run 3:
 #----------------------------------------------------------------------------------------
 
 set -euo pipefail
@@ -44,8 +43,8 @@ GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 # Hyperparams
 EPOCHS=3
 LR=2e-5
-TRAIN_BSZ=16
-EVAL_BSZ=16
+TRAIN_BSZ=32
+EVAL_BSZ=32
 LORA_R=16
 LORA_ALPHA=32
 LORA_DROPOUT=0.05
