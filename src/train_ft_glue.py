@@ -304,6 +304,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    print(args)
     
     # Run config 
     cfg = RunConfig()  
