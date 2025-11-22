@@ -3,9 +3,8 @@
 #----------------------------------------------------------------------------------------
 # bash scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
 # tasks:
-#   run 1:
-#   run 2:
-#   run 3:
+#   run 1: "cola sst2 mrpc qqp stsb"
+#   run 2: "mnli qnli rte wnli"
 #----------------------------------------------------------------------------------------
 
 set -euo pipefail

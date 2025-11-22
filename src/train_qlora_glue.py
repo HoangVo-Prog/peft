@@ -354,6 +354,9 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     
     run_summary = {
         "task": task,
+        "target_modules": qlora.target_modules,
+        "double_quantize": qlora.double_quantize,
+        "quant_type": qlora.quant_type,
         "num_parameters": int(total_params),
         "trainable_parameters": int(trainable_params),
         "trainable_ratio": trainable_ratio,

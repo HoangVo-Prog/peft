@@ -250,6 +250,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
     
     run_summary = {
         "task": task,
+        "target_modules": lora.target_modules,
         "num_parameters": int(total_params),
         "trainable_parameters": int(trainable_params),
         "trainable_ratio": trainable_ratio,

@@ -5,7 +5,6 @@
 # tasks:
 #   run 1: "cola sst2 mrpc qqp stsb"
 #   run 2: "mnli qnli rte wnli"
-#   run 3: 
 #----------------------------------------------------------------------------------------
 
 set -euo pipefail
