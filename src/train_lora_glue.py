@@ -152,11 +152,25 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         data_collator=collator,
         compute_metrics=compute_metrics,
     )
+    
+    # Reset thống kê VRAM trước khi train
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        base_mem = torch.cuda.memory_allocated() / 1024**2  # MB
 
     # Train
     start_time = time.perf_counter()
     trainer.train()
     train_time = time.perf_counter() - start_time
+    
+    # Đọc peak VRAM sau khi train
+    max_mem = None
+    if torch.cuda.is_available():
+        max_mem = torch.cuda.max_memory_allocated() / 1024**2  # MB
+        print(f"[VRAM] base_mem={base_mem:.2f} MB, peak_train_mem={max_mem:.2f} MB")
+
+
     
     # Final marker for W&B
     try:
@@ -243,6 +257,10 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         "val_metrics": val_metrics,
         "val_mm_metrics": mm_metrics,
     }
+    
+    if max_mem is not None:
+        run_summary["vram_base_mb"] = float(base_mem)
+        run_summary["vram_peak_mb"] = float(max_mem)
     
     summary_path = os.path.join(
         out_dir,
@@ -344,8 +362,8 @@ def main():
         cfg.task_name = task
         summaries["task"].append(train(cfg, largs))
 
-    
-    out_path = os.path.join(args.output_dir, out_name)
+    os.makedirs(os.path.join(args.output_dir, "lora"), exist_ok=True)        
+    out_path = os.path.join(args.output_dir, "lora", out_name)
     with open(out_path, "w") as f:
         json.dump(summaries, f, indent=2)
     print(f"Saved summatries metrics to: {out_path}")

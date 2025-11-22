@@ -336,8 +336,8 @@ def main():
             cfg.task_name = task
             summaries["task"].append(train(cfg))   
         
-        
-    out_path = os.path.join(args.output_dir, out_name)
+    os.makedirs(os.path.join(args.output_dir, "ft"), exist_ok=True)    
+    out_path = os.path.join(args.output_dir, "ft", out_name)
     if rank == 0:
         with open(out_path, "w") as f:
             json.dump(summaries, f, indent=2)
