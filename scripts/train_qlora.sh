@@ -17,7 +17,7 @@ FP16_FLAG=""
 bf16_FLAG=""
 USE_NOHUP=0
 QUANT_TYPE="nf4"
-DOUBLE_QUANTIZE=""
+DOUBLE_QUANTIZE="False"
 TASKS_ARG=""
 EXPECT_TASKS_ARG=0
 LORA_ALL_LAYERS=""
@@ -45,7 +45,7 @@ for arg in "$@"; do
     QUANT_TYPE="${arg#--quant_type=}"
 
   elif [[ "$arg" == --double_quantize=* ]]; then
-    DOUBLE_QUANTIZE="--double-quantize"
+    DOUBLE_QUANTIZE="True"
 
   elif [ "$arg" = "--tasks" ]; then
     EXPECT_TASKS_ARG=1
@@ -200,7 +200,7 @@ for MODEL in "${MODELS[@]}"; do
     CMD+=("$bf16_FLAG")
   fi
 
-  CMD+=("$DOUBLE_QUANTIZE")
+  CMD+=(--double-quantize "$DOUBLE_QUANTIZE")
 
   # Log riêng cho từng model
   LOG_FILE="$LOG_DIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
