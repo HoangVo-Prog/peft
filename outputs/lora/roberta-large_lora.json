@@ -1,0 +1,126 @@
+{
+  "model_name": "roberta-large",
+  "task": [
+    {
+      "task": "cola",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "num_parameters": 357593092,
+      "trainable_parameters": 2231298,
+      "trainable_ratio": "0.6240%",
+      "train_time_sec": 160.89033461300005,
+      "val_metrics": {
+        "eval_loss": 0.5724399089813232,
+        "eval_matthews_correlation": 0.10385466804655791,
+        "eval_runtime": 2.553,
+        "eval_samples_per_second": 408.54,
+        "eval_steps_per_second": 12.926,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1365.771484375,
+      "vram_peak_mb": 3529.15380859375
+    },
+    {
+      "task": "sst2",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "num_parameters": 357593092,
+      "trainable_parameters": 2231298,
+      "trainable_ratio": "0.6240%",
+      "train_time_sec": 1954.5405102030008,
+      "val_metrics": {
+        "eval_loss": 0.15356051921844482,
+        "eval_accuracy": 0.948394495412844,
+        "eval_runtime": 4.4378,
+        "eval_samples_per_second": 196.492,
+        "eval_steps_per_second": 6.309,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1382.646484375,
+      "vram_peak_mb": 4374.95751953125
+    },
+    {
+      "task": "mrpc",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "num_parameters": 357593092,
+      "trainable_parameters": 2231298,
+      "trainable_ratio": "0.6240%",
+      "train_time_sec": 217.46421734399974,
+      "val_metrics": {
+        "eval_loss": 0.6224480271339417,
+        "eval_accuracy": 0.6838235294117647,
+        "eval_f1": 0.8122270742358079,
+        "eval_combined_score": 0.7480253018237863,
+        "eval_runtime": 3.2823,
+        "eval_samples_per_second": 124.304,
+        "eval_steps_per_second": 3.961,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1382.646484375,
+      "vram_peak_mb": 6010.04248046875
+    },
+    {
+      "task": "qqp",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "num_parameters": 357593092,
+      "trainable_parameters": 2231298,
+      "trainable_ratio": "0.6240%",
+      "train_time_sec": 18144.117834464,
+      "val_metrics": {
+        "eval_loss": 0.2781383693218231,
+        "eval_accuracy": 0.8792975513232748,
+        "eval_f1": 0.8431574210966124,
+        "eval_combined_score": 0.8612274862099436,
+        "eval_runtime": 277.7662,
+        "eval_samples_per_second": 145.554,
+        "eval_steps_per_second": 4.551,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1382.646484375,
+      "vram_peak_mb": 7059.96826171875
+    },
+    {
+      "task": "stsb",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "num_parameters": 357591042,
+      "trainable_parameters": 2230273,
+      "trainable_ratio": "0.6237%",
+      "train_time_sec": 315.56393479700273,
+      "val_metrics": {
+        "eval_loss": 2.3785619735717773,
+        "eval_pearson": 0.12643872201442719,
+        "eval_spearmanr": 0.12096194102085035,
+        "eval_combined_score": 0.12370033151763876,
+        "eval_runtime": 7.6393,
+        "eval_samples_per_second": 196.353,
+        "eval_steps_per_second": 6.152,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1382.638671875,
+      "vram_peak_mb": 6982.85009765625
+    }
+  ]
+}

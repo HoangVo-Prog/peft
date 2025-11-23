@@ -91,6 +91,30 @@
       "val_mm_metrics": null,
       "vram_base_mb": 1373.88037109375,
       "vram_peak_mb": 10523.27099609375
+    },
+    {
+      "task": "mnli",
+      "precision": "fp32",
+      "num_parameters": 355362819,
+      "train_time_sec": 33971.12919008,
+      "val_metrics": {
+        "eval_loss": 0.3970141112804413,
+        "eval_accuracy": 0.9029037187977585,
+        "eval_runtime": 84.2923,
+        "eval_samples_per_second": 116.44,
+        "eval_steps_per_second": 3.642,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": {
+        "eval_loss": 0.4036194682121277,
+        "eval_accuracy": 0.9016476810414972,
+        "eval_runtime": 87.268,
+        "eval_samples_per_second": 112.664,
+        "eval_steps_per_second": 3.529,
+        "epoch": 3.0
+      },
+      "vram_base_mb": 1357.26318359375,
+      "vram_peak_mb": 10619.2568359375
     }
   ]
 }

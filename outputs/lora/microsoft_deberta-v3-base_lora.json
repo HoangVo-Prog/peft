@@ -1,0 +1,225 @@
+{
+  "model_name": "microsoft/deberta-v3-base",
+  "task": [
+    {
+      "task": "cola",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 98.5822028099999,
+      "val_metrics": {
+        "eval_loss": 0.6109247803688049,
+        "eval_matthews_correlation": 0.0,
+        "eval_runtime": 1.5332,
+        "eval_samples_per_second": 680.268,
+        "eval_steps_per_second": 21.523,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 706.42578125,
+      "vram_peak_mb": 3697.99755859375
+    },
+    {
+      "task": "sst2",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 920.8693171330001,
+      "val_metrics": {
+        "eval_loss": 0.1835189312696457,
+        "eval_accuracy": 0.9288990825688074,
+        "eval_runtime": 1.8312,
+        "eval_samples_per_second": 476.178,
+        "eval_steps_per_second": 15.29,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 724.17578125,
+      "vram_peak_mb": 4325.0185546875
+    },
+    {
+      "task": "mrpc",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 93.50459233699985,
+      "val_metrics": {
+        "eval_loss": 0.6318077445030212,
+        "eval_accuracy": 0.6838235294117647,
+        "eval_f1": 0.8122270742358079,
+        "eval_combined_score": 0.7480253018237863,
+        "eval_runtime": 1.3446,
+        "eval_samples_per_second": 303.425,
+        "eval_steps_per_second": 9.668,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 724.17578125,
+      "vram_peak_mb": 6042.09716796875
+    },
+    {
+      "task": "qqp",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 7835.774326172001,
+      "val_metrics": {
+        "eval_loss": 0.287324994802475,
+        "eval_accuracy": 0.8750432846895869,
+        "eval_f1": 0.8364519261897054,
+        "eval_combined_score": 0.8557476054396462,
+        "eval_runtime": 114.4834,
+        "eval_samples_per_second": 353.152,
+        "eval_steps_per_second": 11.041,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 724.17578125,
+      "vram_peak_mb": 7180.4091796875
+    },
+    {
+      "task": "stsb",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184866050,
+      "trainable_parameters": 443137,
+      "trainable_ratio": "0.2397%",
+      "train_time_sec": 131.33861947400146,
+      "val_metrics": {
+        "eval_loss": 6.483407497406006,
+        "eval_pearson": 0.23025980591773987,
+        "eval_spearmanr": 0.22341259170324498,
+        "eval_combined_score": 0.22683619881049244,
+        "eval_runtime": 3.2635,
+        "eval_samples_per_second": 459.626,
+        "eval_steps_per_second": 14.402,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 724.169921875,
+      "vram_peak_mb": 7172.3974609375
+    },
+    {
+      "task": "mnli",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184869126,
+      "trainable_parameters": 444675,
+      "trainable_ratio": "0.2405%",
+      "train_time_sec": 10515.080231548001,
+      "val_metrics": {
+        "eval_loss": 0.32779043912887573,
+        "eval_accuracy": 0.8772287315333673,
+        "eval_runtime": 36.486,
+        "eval_samples_per_second": 269.007,
+        "eval_steps_per_second": 8.414,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": {
+        "eval_loss": 0.3232010304927826,
+        "eval_accuracy": 0.8799837266069975,
+        "eval_runtime": 37.3005,
+        "eval_samples_per_second": 263.589,
+        "eval_steps_per_second": 8.257,
+        "epoch": 3.0
+      },
+      "vram_base_mb": 706.431640625,
+      "vram_peak_mb": 7179.7958984375
+    },
+    {
+      "task": "qnli",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 3047.4419960369996,
+      "val_metrics": {
+        "eval_loss": 0.24052423238754272,
+        "eval_accuracy": 0.9011532125205931,
+        "eval_runtime": 22.7246,
+        "eval_samples_per_second": 240.4,
+        "eval_steps_per_second": 7.525,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 722.92578125,
+      "vram_peak_mb": 7182.9091796875
+    },
+    {
+      "task": "rte",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 92.92534984899976,
+      "val_metrics": {
+        "eval_loss": 0.6961448192596436,
+        "eval_accuracy": 0.4729241877256318,
+        "eval_runtime": 1.3952,
+        "eval_samples_per_second": 198.542,
+        "eval_steps_per_second": 6.451,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 722.92578125,
+      "vram_peak_mb": 7165.4091796875
+    },
+    {
+      "task": "wnli",
+      "target_modules": [
+        "query_proj",
+        "key_proj",
+        "value_proj"
+      ],
+      "num_parameters": 184867588,
+      "trainable_parameters": 443906,
+      "trainable_ratio": "0.2401%",
+      "train_time_sec": 18.44586596499903,
+      "val_metrics": {
+        "eval_loss": 0.7050848007202148,
+        "eval_accuracy": 0.43661971830985913,
+        "eval_runtime": 0.2634,
+        "eval_samples_per_second": 269.553,
+        "eval_steps_per_second": 11.39,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 722.92578125,
+      "vram_peak_mb": 5628.4404296875
+    }
+  ]
+}

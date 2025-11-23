@@ -1,7 +1,9 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------------
-# bash LORA_TARGET_MODULES="query key value" scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup] [--tasks "task1 task2 ..."]
+# bash LORA_TARGET_MODULES="query key value"\
+# scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup]\
+# [--quant_type nf4] [--double-quantize] [--tasks "task1 task2 ..."]
 # tasks:
 #   run 1: "cola sst2 mrpc qqp stsb"
 #   run 2: "mnli qnli rte wnli"
@@ -15,6 +17,7 @@ FP16_FLAG=""
 bf16_FLAG=""
 USE_NOHUP=0
 QUANT_TYPE="nf4"
+DOUBLE_QUANTIZE=""
 TASKS_ARG=""
 EXPECT_TASKS_ARG=0
 LORA_ALL_LAYERS=""
@@ -41,6 +44,8 @@ for arg in "$@"; do
   elif [[ "$arg" == --quant_type=* ]]; then
     QUANT_TYPE="${arg#--quant_type=}"
   fi
+  elif [[ "$arg" == --double_quantize=* ]]; then
+    DOUBLE_QUANTIZE="--double-quantize"
   elif [ "$arg" = "--tasks" ]; then
     EXPECT_TASKS_ARG=1
   fi
@@ -192,6 +197,8 @@ for MODEL in "${MODELS[@]}"; do
   if [ -n "$bf16_FLAG" ]; then
     CMD+=("$bf16_FLAG")
   fi
+
+  CMD+=("$DOUBLE_QUANTIZE")
 
   # Log riêng cho từng model
   LOG_FILE="$LOG_DIR/train_lora_${MODEL//\//_}_${TIMESTAMP}.log"
