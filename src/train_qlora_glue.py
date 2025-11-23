@@ -205,6 +205,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     )
 
     model = get_peft_model(base, lcfg)
+    model.cuda()
     
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -258,7 +259,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         report_to=report_targets,
         run_name=run_name,
         seed=qlora.seed,
-        fp16=bool(cfg.fp16 and torch.cuda.is_available()), # TODO:
+        fp16=bool(cfg.fp16 and torch.cuda.is_available()), 
         bf16=bool(cfg.bf16 and torch.cuda.is_available()),
         optim="paged_adamw_8bit", # defailt optim 
     )
