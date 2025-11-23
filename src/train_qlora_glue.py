@@ -157,6 +157,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         bnb_4bit_quant_type=qlora.quant_type,
         bnb_4bit_use_double_quant=qlora.double_quantize,
         bnb_4bit_compute_dtype=compute_type,
+        llm_int8_skip_modules=["pooler"]
     )
 
     # Load in 4-bit
