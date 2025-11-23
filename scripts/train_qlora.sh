@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------------
-# bash LORA_TARGET_MODULES="query key value"\
-# scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup]\
+# LORA_TARGET_MODULES="query key value"\
+# bash scripts/train_qlora.sh [MODEL_NAME] [--fp16] [--bf16] [--nohup]\
 # [--quant_type nf4] [--double-quantize] [--tasks "task1 task2 ..."]
 # tasks:
 #   run 1: "cola sst2 mrpc qqp stsb"
@@ -34,22 +34,24 @@ for arg in "$@"; do
 
   if [ "$arg" = "--fp16" ]; then
     FP16_FLAG="--fp16"
-  fi
+
   elif [ "$arg" = "--bf16" ]; then
-    bf16_FLAG="--bf16"
-  fi
+    BF16_FLAG="--bf16"
+
   elif [ "$arg" = "--nohup" ]; then
     USE_NOHUP=1
-  fi
+
   elif [[ "$arg" == --quant_type=* ]]; then
     QUANT_TYPE="${arg#--quant_type=}"
-  fi
+
   elif [[ "$arg" == --double_quantize=* ]]; then
     DOUBLE_QUANTIZE="--double-quantize"
+
   elif [ "$arg" = "--tasks" ]; then
     EXPECT_TASKS_ARG=1
   fi
 done
+
 
 # Timestamp để dùng cho log tổng khi wrap nohup
 GLOBAL_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
