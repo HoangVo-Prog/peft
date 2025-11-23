@@ -190,7 +190,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
     if qlora.lora_all_layers:
         print("Applying LoRA to all linear layers")
         qlora.target_modules = select_modules_for_all_layers(base)
-        print("Target modules:", qlora.target_modules)
+    print("Target modules:", qlora.target_modules)
     
     # LoRA config
     lcfg = LoraConfig(
