@@ -176,7 +176,7 @@ for MODEL in "${MODELS[@]}"; do
     --lora_r "$LORA_R"
     --lora_alpha "$LORA_ALPHA"
     --lora_dropout "$LORA_DROPOUT"
-    --lora_target_modules "${LORA_TARGET_MODULES[*]}"
+    --lora_target_modules "${LORA_TARGET_MODULES[@]}"
     --quant_type "$QUANT_TYPE"
     --no-wandb
   )
