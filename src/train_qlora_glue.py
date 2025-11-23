@@ -191,6 +191,7 @@ def train(cfg: RunConfig, qlora: QLoRAArgs):
         print("Applying LoRA to all linear layers")
         qlora.target_modules = select_modules_for_all_layers(base)
     print("Target modules:", qlora.target_modules)
+    print(select_modules_for_all_layers(base))
     
     # LoRA config
     lcfg = LoraConfig(
@@ -436,7 +437,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora_alpha", type=int, default=32)
     p.add_argument("--lora_dropout", type=float, default=0.05)
     p.add_argument("--lora_bias", type=str, default="none")
-    p.add_argument("--lora_target_modules", type=str, default="")  # comma-separated; empty => auto
+    p.add_argument("--lora_target_modules", dest="target_modules", type=str, default="")  # comma-separated; empty => auto
     p.add_argument("--lora_all_layers", dest="lora_all_layers", action="store_true", help="Apply LoRA to all linear layers")
 
     p.add_argument("--seed", type=int, default=42)
