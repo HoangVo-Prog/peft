@@ -75,8 +75,6 @@ def train(cfg: RunConfig, lora: LoRAArgs):
 
     base = AutoModelForSequenceClassification.from_pretrained(cfg.model_name, config=hf_cfg)
     
-    if cfg.gradient_enable:
-        base.gradient_checkpointing_enable()
         
     if lora.lora_all_layers:
         print("Applying LoRA to all linear layers")
@@ -96,7 +94,6 @@ def train(cfg: RunConfig, lora: LoRAArgs):
 
     model = get_peft_model(base, lcfg)
     if cfg.gradient_enable:
-        print("Enable Gradient Checkpoint")
         model.gradient_checkpointing_enable()
         model.config.use_cache = False
     
@@ -151,7 +148,7 @@ def train(cfg: RunConfig, lora: LoRAArgs):
         report_to=report_targets,
         run_name=run_name,
         seed=lora.seed,
-        fp16=bool(cfg.fp16 and torch.cuda.is_available()), # TODO:
+        fp16=bool(cfg.fp16 and torch.cuda.is_available()), 
         bf16=bool(cfg.bf16 and torch.cuda.is_available()),
         optim="adamw_torch", # default optim
     )
