@@ -2,135 +2,242 @@
   "model_name": "roberta-base",
   "task": [
     {
-    "task": "cola",
-    "target_modules": [
+      "task": "cola",
+      "target_modules": [
         "query",
         "key",
         "value"
-    ],
-    "double_quantize": true,
-    "quant_type": "nf4",
-    "num_parameters": 83214340,
-    "trainable_parameters": 1034498,
-    "trainable_ratio": "1.2432%",
-    "train_time_sec": 530.524576182,
-    "val_metrics": {
-        "eval_loss": 0.7216069102287292,
-        "eval_matthews_correlation": 0.3818070077211945,
-        "eval_runtime": 1.2338,
-        "eval_samples_per_second": 845.364,
-        "eval_steps_per_second": 26.747,
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 54.498424297999975,
+      "val_metrics": {
+        "eval_loss": 0.6153842806816101,
+        "eval_matthews_correlation": 0.0,
+        "eval_runtime": 0.8507,
+        "eval_samples_per_second": 1226.047,
+        "eval_steps_per_second": 19.984,
         "epoch": 3.0
-    },
-    "val_mm_metrics": null,
-    "vram_base_mb": 199.509765625,
-    "vram_peak_mb": 327.0673828125
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 199.509765625,
+      "vram_peak_mb": 1832.90087890625
     },
     {
-    "task": "sst2",
-    "target_modules": [
+      "task": "sst2",
+      "target_modules": [
         "query",
         "key",
         "value"
-    ],
-    "double_quantize": true,
-    "quant_type": "nf4",
-    "num_parameters": 83214340,
-    "trainable_parameters": 1034498,
-    "trainable_ratio": "1.2432%",
-    "train_time_sec": 4249.556645414999,
-    "val_metrics": {
-        "eval_loss": 0.3333125114440918,
-        "eval_accuracy": 0.926605504587156,
-        "eval_runtime": 1.4746,
-        "eval_samples_per_second": 591.343,
-        "eval_steps_per_second": 18.988,
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 692.7849652989999,
+      "val_metrics": {
+        "eval_loss": 0.2222699522972107,
+        "eval_accuracy": 0.9208715596330275,
+        "eval_runtime": 1.4316,
+        "eval_samples_per_second": 609.102,
+        "eval_steps_per_second": 9.779,
         "epoch": 3.0
-    },
-    "val_mm_metrics": null,
-    "vram_base_mb": 365.8935546875,
-    "vram_peak_mb": 518.2060546875
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 365.8935546875,
+      "vram_peak_mb": 2649.51220703125
     },
     {
-    "task": "mrpc",
-    "target_modules": [
+      "task": "mrpc",
+      "target_modules": [
         "query",
         "key",
         "value"
-    ],
-    "double_quantize": true,
-    "quant_type": "nf4",
-    "num_parameters": 83214340,
-    "trainable_parameters": 1034498,
-    "trainable_ratio": "1.2432%",
-    "train_time_sec": 238.66870361099973,
-    "val_metrics": {
-        "eval_loss": 0.5874706506729126,
-        "eval_accuracy": 0.696078431372549,
-        "eval_f1": 0.8181818181818181,
-        "eval_combined_score": 0.7571301247771836,
-        "eval_runtime": 1.0785,
-        "eval_samples_per_second": 378.301,
-        "eval_steps_per_second": 12.054,
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 71.38818722299993,
+      "val_metrics": {
+        "eval_loss": 0.6305113434791565,
+        "eval_accuracy": 0.6838235294117647,
+        "eval_f1": 0.8122270742358079,
+        "eval_combined_score": 0.7480253018237863,
+        "eval_runtime": 1.0505,
+        "eval_samples_per_second": 388.4,
+        "eval_steps_per_second": 6.664,
         "epoch": 3.0
-    },
-    "val_mm_metrics": null,
-    "vram_base_mb": 560.166015625,
-    "vram_peak_mb": 751.427734375
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 558.66015625,
+      "vram_peak_mb": 4045.83642578125
     },
     {
-    "task": "qqp",
-    "target_modules": [
+      "task": "qqp",
+      "target_modules": [
         "query",
         "key",
         "value"
-    ],
-    "double_quantize": true,
-    "quant_type": "nf4",
-    "num_parameters": 83214340,
-    "trainable_parameters": 1034498,
-    "trainable_ratio": "1.2432%",
-    "train_time_sec": 24866.963171321,
-    "val_metrics": {
-        "eval_loss": 0.43958404660224915,
-        "eval_accuracy": 0.869403907989117,
-        "eval_f1": 0.8280802292263612,
-        "eval_combined_score": 0.8487420686077392,
-        "eval_runtime": 88.4242,
-        "eval_samples_per_second": 457.228,
-        "eval_steps_per_second": 14.295,
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 6236.919034432,
+      "val_metrics": {
+        "eval_loss": 0.32864460349082947,
+        "eval_accuracy": 0.849344546129112,
+        "eval_f1": 0.8077275166514094,
+        "eval_combined_score": 0.8285360313902608,
+        "eval_runtime": 95.2476,
+        "eval_samples_per_second": 424.473,
+        "eval_steps_per_second": 6.635,
         "epoch": 3.0
-    },
-    "val_mm_metrics": null,
-    "vram_base_mb": 665.2744140625,
-    "vram_peak_mb": 955.81298828125
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 666.1494140625,
+      "vram_peak_mb": 4988.228515625
     },
     {
-    "task": "stsb",
-    "target_modules": [
+      "task": "stsb",
+      "target_modules": [
         "query",
         "key",
         "value"
-    ],
-    "double_quantize": true,
-    "quant_type": "nf4",
-    "num_parameters": 83212802,
-    "trainable_parameters": 1033729,
-    "trainable_ratio": "1.2423%",
-    "train_time_sec": 359.3552854369991,
-    "val_metrics": {
-        "eval_loss": 0.6903833150863647,
-        "eval_pearson": 0.8503450155258179,
-        "eval_spearmanr": 0.8579833493479323,
-        "eval_combined_score": 0.8541641824368751,
-        "eval_runtime": 2.5332,
-        "eval_samples_per_second": 592.131,
-        "eval_steps_per_second": 18.553,
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83212802,
+      "trainable_parameters": 1033729,
+      "trainable_ratio": "1.2423%",
+      "train_time_sec": 106.38047178099987,
+      "val_metrics": {
+        "eval_loss": 2.2534172534942627,
+        "eval_pearson": 0.16705654561519623,
+        "eval_spearmanr": 0.23230426666423434,
+        "eval_combined_score": 0.19968040613971527,
+        "eval_runtime": 2.5765,
+        "eval_samples_per_second": 582.176,
+        "eval_steps_per_second": 9.315,
         "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 860.03515625,
+      "vram_peak_mb": 5087.46923828125
     },
-    "val_mm_metrics": null,
-    "vram_base_mb": 858.666015625,
-    "vram_peak_mb": 1103.79833984375
+    {
+      "task": "mnli",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83215878,
+      "trainable_parameters": 1035267,
+      "trainable_ratio": "1.2441%",
+      "train_time_sec": 8506.250354313002,
+      "val_metrics": {
+        "eval_loss": 0.455910325050354,
+        "eval_accuracy": 0.8220071319409068,
+        "eval_runtime": 30.3616,
+        "eval_samples_per_second": 323.27,
+        "eval_steps_per_second": 5.072,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": {
+        "eval_loss": 0.4470095634460449,
+        "eval_accuracy": 0.8290276647681042,
+        "eval_runtime": 31.5608,
+        "eval_samples_per_second": 311.526,
+        "eval_steps_per_second": 4.879,
+        "epoch": 3.0
+      },
+      "vram_base_mb": 965.5361328125,
+      "vram_peak_mb": 5330.98779296875
+    },
+    {
+      "task": "qnli",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 2509.984362651001,
+      "val_metrics": {
+        "eval_loss": 0.3052404224872589,
+        "eval_accuracy": 0.8729635731283177,
+        "eval_runtime": 19.103,
+        "eval_samples_per_second": 285.976,
+        "eval_steps_per_second": 4.502,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1115.15234375,
+      "vram_peak_mb": 5477.89501953125
+    },
+    {
+      "task": "rte",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 71.80051288899995,
+      "val_metrics": {
+        "eval_loss": 0.6920441389083862,
+        "eval_accuracy": 0.5270758122743683,
+        "eval_runtime": 1.0996,
+        "eval_samples_per_second": 251.905,
+        "eval_steps_per_second": 4.547,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1307.4248046875,
+      "vram_peak_mb": 5585.0078125
+    },
+    {
+      "task": "wnli",
+      "target_modules": [
+        "query",
+        "key",
+        "value"
+      ],
+      "double_quantize": true,
+      "quant_type": "nf4",
+      "num_parameters": 83214340,
+      "trainable_parameters": 1034498,
+      "trainable_ratio": "1.2432%",
+      "train_time_sec": 14.487979492001614,
+      "val_metrics": {
+        "eval_loss": 0.6867156028747559,
+        "eval_accuracy": 0.5633802816901409,
+        "eval_runtime": 0.2543,
+        "eval_samples_per_second": 279.167,
+        "eval_steps_per_second": 7.864,
+        "epoch": 3.0
+      },
+      "val_mm_metrics": null,
+      "vram_base_mb": 1456.552734375,
+      "vram_peak_mb": 5142.62744140625
     }
   ]
 }
